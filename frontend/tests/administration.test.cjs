@@ -102,7 +102,7 @@ test('administration screens render dedicated employee, activity and settings la
  const employee=render(SelfService,{employees:state.store.employees,workforce:state.workforce,operations:state.operations,admin:state.admin,updateAdmin:()=>{},updateWorkforce:()=>{}});
  const settings=render(Settings,{admin:state.admin,update:()=>{},workforce:state.workforce});
  const audit=render(AuditLogs,{events:[],onExport:()=>{}});
- assert(employee.includes('Employment details'));assert(employee.includes('My equipment'));assert(employee.includes('My requests'));assert(employee.includes('Preview as employee'));
+ assert(employee.includes('Employee Dashboard'));assert(employee.includes('My equipment'));assert(employee.includes('My requests'));assert(employee.includes('Preview as employee'));
  assert(settings.includes('Self-service requests'));assert(settings.includes('Save changes'));assert(audit.includes('No session activity yet'));assert(audit.includes('not tamper-proof'));
  for(const html of [employee,settings,audit]){assert(!html.includes('class="metrics'));assert(!html.includes('wf-hero'));assert(!html.includes('New record'));}
 });

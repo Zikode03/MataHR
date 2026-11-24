@@ -11,10 +11,12 @@ const { renderToPipeableStream } = require('react-dom/server');
 const origin = process.argv[2] || 'http://localhost:5173';
 async function startup(reproduceBadOrder = false) {
   let root, route = '/dashboard';
+  const previewStorage = new Map();
   const context = vm.createContext({
     console, URL, URLSearchParams, Date, Intl, Map, Set, File, Blob,
     crypto, structuredClone, setTimeout, clearTimeout, TextEncoder, TextDecoder,
     document: { getElementById: () => ({}) }, window: {},
+    sessionStorage: { getItem: key => previewStorage.get(key) ?? null, setItem: (key, value) => previewStorage.set(key, value), removeItem: key => previewStorage.delete(key), clear: () => previewStorage.clear() },
     $RefreshSig$: () => () => {}, $RefreshReg$: () => {},
   });
   const modules = new Map();
@@ -71,7 +73,10 @@ async function startup(reproduceBadOrder = false) {
   await entry.link(link);
   await entry.evaluate();
   assert(root, 'Application did not reach createRoot.render');
-  async function render(path) {
+  const sessionModule = await load('/src/auth/previewSession.ts');
+  async function render(path, acknowledged = true) {
+    previewStorage.clear();
+    if (acknowledged) sessionModule.namespace.beginPreviewSession('hr');
     route = path;
     return new Promise((resolve, reject) => {
       let html = '';
@@ -84,13 +89,20 @@ async function startup(reproduceBadOrder = false) {
       });
     });
   }
+  const gated = await render('/dashboard', false);
+  assert(gated.includes('Welcome back.') && !gated.includes('class="shell"'), 'Workspace must remain hidden without acknowledged preview entry');
+  process.stdout.write('PASS workspace stays hidden before acknowledgement\n');
   for (const [path, content] of [
+    ['/login', 'Welcome back.'],
+    ['/', 'Welcome back.'],
+    ['/register', 'Clock in &amp; out'],
     ['/dashboard', 'People overview'],
     ['/organisation?tab=chart', 'HR builds the structure'],
     ['/organisation?tab=positions', 'Add position'],
     ['/employees?employee=employees-1&tab=Overview', 'Employment details'],
     ['/employees?employee=employees-1&tab=Contracts', 'Employee contracts'],
     ['/compliance?tab=Policies', 'Policies &amp; employee acknowledgement'],
+    ['/self-service?employee=employees-1', 'Employee Dashboard'],
     ['/self-service?employee=employees-1&section=Policies', 'Read &amp; acknowledge'],
   ]) {
     const html = await render(path);

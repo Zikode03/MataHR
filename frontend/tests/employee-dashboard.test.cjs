@@ -1,0 +1,18 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),Module=require('node:module'),{transformSync}=require('esbuild');
+for(const ext of ['.ts','.tsx'])Module._extensions[ext]=(mod,file)=>mod._compile(transformSync(fs.readFileSync(file,'utf8'),{loader:ext.slice(1),format:'cjs',jsx:'automatic'}).code,file);
+const {initialWorkspace}=require('../src/administration/workspace.ts'),{employeeDashboardData}=require('../src/administration/employeeDashboardModel.ts');
+test('employee dashboard separates recorded days from approved hours and excludes other employees',()=>{
+ const state=initialWorkspace(),w=state.workforce;w.sessions=[{id:'one',employee:'employees-1',date:'2026-11-23',start:'2026-11-23T06:00:00Z',end:'2026-11-23T08:00:00Z',place:'Office',status:'Approved'},{id:'two',employee:'employees-1',date:'2026-11-23',start:'2026-11-23T09:00:00Z',end:'2026-11-23T10:00:00Z',place:'Office',status:'Pending review'},{id:'three',employee:'employees-1',date:'2026-11-24',start:'2026-11-24T08:00:00Z',end:'',place:'Remote',status:'Open'},{id:'other',employee:'employees-2',date:'2026-11-23',start:'2026-11-23T06:00:00Z',end:'2026-11-23T16:00:00Z',place:'Office',status:'Approved'}];
+ const data=employeeDashboardData(w,'employees-1','2026-11-24','2025-02-01');assert.equal(data.recordedDays,2);assert.equal(data.monthHours,2);assert.equal(data.dayHours,0);assert.equal(data.today.length,1);assert.equal(data.distribution.reduce((n,d)=>n+d.n,0),2);assert.equal(data.distribution.find(d=>d.label==='Remote work').n,1);assert.equal(data.dayTarget,null);
+ w.attendance.schedules=[{id:'schedule',employee:'employees-1',days:[1,2,3,4,5],start:'08:00',end:'17:00',grace:10}];w.hrConfig.holidays=[{id:'holiday',date:'2026-11-23',name:'Holiday'}];const scheduled=employeeDashboardData(w,'employees-1','2026-11-24','2025-02-01');assert.equal(scheduled.weekTarget,9);assert.equal(scheduled.dayTarget,9);assert.equal(scheduled.distribution.find(d=>d.label==='Other recorded').n,1);
+});
+test('targets respect employment start and approved overtime stays employee scoped',()=>{
+ const {workforce:w}=initialWorkspace();w.attendance.schedules=[{id:'schedule',employee:'employees-1',days:[1,2,3,4,5],start:'08:00',end:'16:00',grace:0}];const data=employeeDashboardData(w,'employees-1','2026-11-24','2026-11-24');assert.equal(data.monthTarget,8);assert.equal(data.weekTarget,8);assert.equal(data.overtime,0);
+});
+test('self-service opens employee dashboard and retains links to employee-only task sections',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),{MemoryRouter}=require('react-router-dom'),{SelfService}=require('../src/administration/SelfService.tsx'),state=initialWorkspace();
+ const props={employees:state.store.employees,org:state.org,core:state.core,workforce:state.workforce,operations:state.operations,admin:state.admin,updateAdmin(){},updateWorkforce(){},updateOperations(){}};
+ const render=path=>renderToStaticMarkup(React.createElement(MemoryRouter,{initialEntries:[path]},React.createElement(SelfService,props)));
+ const dashboard=render('/self-service?employee=employees-1');for(const label of ['Employee Dashboard','Attendance overview','Leave details','Approved hours this week','Open clock-in','My policies'])assert(dashboard.includes(label));assert(dashboard.includes('Thandi Dlamini'));assert(!dashboard.includes('Better than'));assert(!dashboard.includes('Productive Hours'));
+ assert(render('/self-service?employee=employees-1&section=My%20details').includes('Employment details'));assert(render('/self-service?employee=employees-1&section=Policies').includes('Read &amp; acknowledge'));
+});
