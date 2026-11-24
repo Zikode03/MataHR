@@ -1,3 +1,3 @@
-# MataHR frontend
+# MataHR React frontend
 
-Node.js 22.12+; run `npm install`, `npm start`, `npm run build` in frontend. All navigation routes now render interactive demo screens or dedicated dashboard/attendance/analytics/assistant views. Record editors share in-memory data and support search, status filters and CSV export. Status changes are demonstrations, not enforced business workflows. Login design is deliberately deferred. No production authentication, role security, payroll calculation, AI integration, location verification or database. Do not enter real HR data. Build/browser verification remains required.
+React 19 + TypeScript + Vite. Node.js 22 LTS recommended. Run npm install, npm start, then open http://localhost:5173. Run npm run build for type checking and production bundling. Angular history is preserved in archive/angular-frontend. Existing module prototypes migrated; no production authentication, real attendance verification, payroll, AI or persistent employee data. Login mockup remains a design reference, not implemented. Do not enter real employee data.

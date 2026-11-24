@@ -1,3 +1,3 @@
 # MataHR
 
-Matateni Technologies HR platform. Angular frontend under `frontend/`. Initial UI uses fictional demo data only; no production authentication or attendance verification.
+Matateni Technologies HR platform. React + TypeScript frontend in frontend/. Angular snapshot: archive/angular-frontend. Demo only; no production HR data or authentication.
