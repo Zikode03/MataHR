@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { provideRouter, RouterLink, RouterLinkActive, RouterOutlet, ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
+import { ModulePage, AssistantPage, AnalyticsPage } from './modules';
 
 const groups = [
  {title:'Overview',items:[['dashboard','Dashboard','▦']]},
@@ -57,14 +58,10 @@ class Register {
  arrangement=signal('Office');active=signal(false);message=signal('No demo session started.');
  toggle(){this.active.update(v=>!v);this.message.set(this.active()?'Simulated session started: '+this.arrangement()+'. Attendance is not verified.':'Simulated session ended. No attendance record was saved.');}
 }
-@Component({standalone:true,template:`<div class="eyebrow">MATAHR / MODULES</div><h1>{{title()}}</h1><p class="muted">This module is part of the planned HR scope.</p><section class="card"><h2>Requirements review</h2><p>The workflow, permissions and data fields will be refined before implementation. This page is a navigation placeholder, not a working module.</p></section>`})
-class ModulePage {
- title=toSignal(this.route.data.pipe(map(d=>String(d['title']??'Module'))),{initialValue:'Module'});
- constructor(private route:ActivatedRoute){}
-}
+
 @Component({selector:'app-root',standalone:true,imports:[RouterLink,RouterLinkActive,RouterOutlet],template:`
 <div class="shell"><aside [class.open]="menu()"><a class="brand" routerLink="/dashboard"><span class="brand-mark">M</span><span><b>MATAHR</b><small>Matateni Technologies</small></span></a><div class="workspace">MATATENI · HR WORKSPACE</div><nav aria-label="Main navigation">@for(g of groups;track g.title){<div class="nav-label">{{g.title}}</div>@for(i of g.items;track i[0]){<a [routerLink]="['/',i[0]]" routerLinkActive="selected" (click)="menu.set(false)"><span class="nav-icon" aria-hidden="true">{{i[2]}}</span>{{i[1]}}</a>}}</nav></aside><div class="content"><header><button class="menu-toggle" aria-label="Toggle navigation" [attr.aria-expanded]="menu()" (click)="menu.update(v=>!v)">☰</button><span>Human Capital Management</span><span class="header-right">Design preview <span class="avatar">HR</span></span></header><main><router-outlet/></main><footer>MataHR · Matateni Technologies · Frontend prototype</footer></div></div>
 `})
 class App {groups=groups;menu=signal(false);}
-const special=['dashboard','employees','register'];
-bootstrapApplication(App,{providers:[provideRouter([{path:'',pathMatch:'full',redirectTo:'dashboard'},{path:'dashboard',component:Dashboard},{path:'employees',component:Employees},{path:'register',component:Register},...groups.flatMap(g=>g.items).filter(i=>!special.includes(i[0])).map(i=>({path:i[0],component:ModulePage,data:{title:i[1]}})),{path:'**',redirectTo:'dashboard'}])]}).catch(console.error);
+const special=['dashboard','register','assistant','analytics'];
+bootstrapApplication(App,{providers:[provideRouter([{path:'',pathMatch:'full',redirectTo:'dashboard'},{path:'dashboard',component:Dashboard},{path:'assistant',component:AssistantPage},{path:'analytics',component:AnalyticsPage},{path:'register',component:Register},...groups.flatMap(g=>g.items).filter(i=>!special.includes(i[0])).map(i=>({path:i[0],component:ModulePage,data:{title:i[1]}})),{path:'**',redirectTo:'dashboard'}])]}).catch(console.error);
