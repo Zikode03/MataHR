@@ -74,9 +74,11 @@ async function startup(reproduceBadOrder = false) {
   await entry.evaluate();
   assert(root, 'Application did not reach createRoot.render');
   const sessionModule = await load('/src/auth/previewSession.ts');
-  async function render(path, acknowledged = true) {
+  if (sessionModule.status === 'unlinked') await sessionModule.link(link);
+  if (sessionModule.status === 'linked') await sessionModule.evaluate();
+  async function render(path, acknowledged = true, role = 'hr') {
     previewStorage.clear();
-    if (acknowledged) sessionModule.namespace.beginPreviewSession('hr');
+    if (acknowledged) sessionModule.namespace.beginPreviewSession(role);
     route = path;
     return new Promise((resolve, reject) => {
       let html = '';
@@ -103,12 +105,19 @@ async function startup(reproduceBadOrder = false) {
     ['/employees?employee=employees-1&tab=Contracts', 'Employee contracts'],
     ['/compliance?tab=Policies', 'Policies &amp; employee acknowledgement'],
     ['/self-service?employee=employees-1', 'Employee Dashboard'],
-    ['/self-service?employee=employees-1&section=Policies', 'Read &amp; acknowledge'],
+    ['/self-service?employee=employees-1&section=Policies', 'My policies'],
   ]) {
     const html = await render(path);
     assert(html.replace(/<!--[\s\S]*?-->/g, '').includes(content), `Missing page content: ${path}`);
     process.stdout.write(`PASS live development entry: ${path}\n`);
   }
+  for (const [role,path,content] of [
+    ['admin','/admin','System workspace'],['admin','/users','Users &amp; access'],['admin','/security','Security controls'],['admin','/payroll','outside your role'],['admin','/employees','outside your role'],
+    ['manager','/team','My team'],['manager','/team/leave','Leave approvals'],['manager','/payroll','outside your role'],
+    ['employee','/self-service?employee=employees-2','Employee Dashboard'],['employee','/employees','outside your role'],['employee','/organisation','Read only'],
+    ['hr','/settings','HR settings'],['hr','/users','outside your role'],['hr','/audit','outside your role']
+  ]) {const html=await render(path,true,role);assert(html.replace(/<!--[\s\S]*?-->/g,'').includes(content),`Role boundary failed: ${role} ${path}`);if(role==='employee'&&path.startsWith('/self-service'))assert(!html.includes('Preview as employee'),'Employee must not switch identity');process.stdout.write(`PASS role workspace: ${role} ${path}\n`);}
+
 }
 (async () => {
   await assert.rejects(startup(true), /Cannot access 'lazy' before initialization/);

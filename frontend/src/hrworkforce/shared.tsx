@@ -1,6 +1,6 @@
 import type {Workforce} from '../Workforce';
 import type {RecordRow} from '../data';
-export type Props={state:Workforce;update:(s:Workforce,actor?:string)=>void;employees:RecordRow[];managers?:Record<string,string>;employeeOnly?:string};
+export type Props={configurationAllowed?:boolean;state:Workforce;update:(s:Workforce,actor?:string)=>void;employees:RecordRow[];managers?:Record<string,string>;employeeOnly?:string};
 export const personName=(people:RecordRow[],id:string)=>people.find(p=>p.id===id)?.values[1]??id;
 export function PersonSelect({people,value,onChange}:{people:RecordRow[];value:string;onChange:(v:string)=>void}){return <label>Employee<select required value={value} onChange={e=>onChange(e.target.value)}><option value="">Select employee</option>{people.filter(p=>p.status!=='Exited').map(p=><option key={p.id} value={p.id}>{p.values[1]} · {p.values[0]}</option>)}</select></label>}
 export function Tabs({items,value,onChange}:{items:string[];value:string;onChange:(s:string)=>void}){return <div className="life-nav" style={{flexWrap:'wrap'}}>{items.map(t=><button key={t} className={t===value?'active':''} aria-pressed={t===value} onClick={()=>onChange(t)}>{t}</button>)}</div>}

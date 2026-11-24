@@ -26,6 +26,7 @@ function compareRows<T extends {id:string}>(before:T[],after:T[],module:string,r
 }
 export function detectChanges(before:Workspace,after:Workspace):Change[]{
  const changes:Change[]=[];
+ changes.push(...compareRows(before.admin.accounts??[],after.admin.accounts??[],'User Access',r=>r.id));
  for(const key of Object.keys({...before.store,...after.store})){
  const events=compareRows(before.store[key]??[],after.store[key]??[],key==='employees'?'Employees':key[0].toUpperCase()+key.slice(1),r=>key==='employees'?r.values[0]:r.id);
  for(const event of events){if(event.fields.includes('Record fields')){const row=after.store[key]?.find(r=>(key==='employees'?r.values[0]:r.id)===event.reference),old=row?before.store[key]?.find(r=>r.id===row.id):undefined;if(row&&old)event.fields=event.fields.flatMap(field=>field==='Record fields'?row.values.flatMap((value,i)=>value!==old.values[i]?[definitions[key]?.fields[i]??`Field ${i+1}`]:[]):[field]);}changes.push(event);}

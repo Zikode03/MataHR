@@ -11,7 +11,7 @@ import type {RecordRow} from './data';
 type Staff=RecordRow[];
 type Connection={mode:'internal'|'external';provider:string;reference:string};
 export type Leave={id:string;employee:string;type:string;start:string;end:string;reason:string;status:'Pending'|'Approved'|'Rejected';days?:number;stage?:string;approval?:string;manager?:string;paid?:boolean;evidence?:string;history?:{reviewer:string;note:string;decision:string;stage:string;at:string}[]};
-type Session={id:string;employee:string;date:string;start:string;end:string;place:string;location?:string;evidence?:string;status:'Open'|'Pending review'|'Approved'|'Rejected'};
+type Session={reviewNote?:string;reviewer?:string;reviewedAt?:string;id:string;employee:string;date:string;start:string;end:string;place:string;location?:string;evidence?:string;status:'Open'|'Pending review'|'Approved'|'Rejected'};
 export type Pay={id:string;employee:string;period:string;basic:number;allowance:number;deduction:number;status:'Draft'|'Reviewed'|'Approved';benefitEmployer?:number;benefitEmployee?:number;hours?:number;overtime?:number;unpaid?:number;pending?:number};
 export type Workforce={leave:Leave[];sessions:Session[];pay:Pay[];leaveConnection:Connection;payConnection:Connection;attendance?:Attendance;hrConfig?:HRConfig};
 const local:Connection={mode:'internal',provider:'',reference:''};
@@ -28,7 +28,7 @@ export function initialWorkforce():Workforce {
   {id:'session-demo-3',employee:'employees-7',date:today,start:today+'T08:30:00+02:00',end:today+'T16:30:00+02:00',place:'Remote',status:'Approved'},
  ],pay:[],leaveConnection:{...local},payConnection:{...local},attendance:initialAttendance(),hrConfig:initialHRConfig()};
 }
-type Props={state:Workforce;update:(s:Workforce)=>void;employees:Staff};
+type Props={configurationAllowed?:boolean;state:Workforce;update:(s:Workforce)=>void;employees:Staff};
 const uid=()=>crypto.randomUUID();
 const day=(d=new Date())=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 const name=(es:Staff,id:string)=>es.find(e=>e.id===id)?.values[1]??'Unknown employee';
