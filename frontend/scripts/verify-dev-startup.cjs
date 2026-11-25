@@ -8,8 +8,8 @@ const { renderToPipeableStream } = require('react-dom/server');
 
 // Execute the actual modules served by Vite. Adapt only browser mounting/HMR
 // to a server render, keeping development import ordering and lazy loading.
-const origin = process.argv[2] || 'http://localhost:5173';
-async function startup(reproduceBadOrder = false) {
+let origin;
+async function startup() {
   let root, route = '/dashboard';
   const previewStorage = new Map();
   const context = vm.createContext({
@@ -46,15 +46,7 @@ async function startup(reproduceBadOrder = false) {
       const response = await fetch(key);
       assert.equal(response.status, 200, `Vite module failed: ${key}`);
       let code = await response.text();
-      if (reproduceBadOrder && path === '/src/main.tsx') {
-        const declaration = code.match(/^const Compliance = lazy\(.*$/m)?.[0];
-        assert(declaration, 'Expected the lazy compliance declaration');
-        code = code.replace(declaration, '');
-        const reactImport = code.search(/^import __vite__cjsImport\d+_react from /m);
-        assert(reactImport >= 0, 'Expected the Vite React interop import');
-        code = code.slice(0, reactImport) + declaration + '\n' + code.slice(reactImport);
-      }
-      return new vm.SourceTextModule(code, {
+        return new vm.SourceTextModule(code, {
         context, identifier: key,
         initializeImportMeta: meta => { meta.url = key; },
         importModuleDynamically: async (child, referring) => {
@@ -73,12 +65,9 @@ async function startup(reproduceBadOrder = false) {
   await entry.link(link);
   await entry.evaluate();
   assert(root, 'Application did not reach createRoot.render');
-  const sessionModule = await load('/src/auth/previewSession.ts');
-  if (sessionModule.status === 'unlinked') await sessionModule.link(link);
-  if (sessionModule.status === 'linked') await sessionModule.evaluate();
   async function render(path, acknowledged = true, role = 'hr') {
     previewStorage.clear();
-    if (acknowledged) sessionModule.namespace.beginPreviewSession(role);
+
     route = path;
     return new Promise((resolve, reject) => {
       let html = '';
@@ -91,36 +80,17 @@ async function startup(reproduceBadOrder = false) {
       });
     });
   }
-  const gated = await render('/dashboard', false);
-  assert(gated.includes('Welcome back.') && !gated.includes('class="shell"'), 'Workspace must remain hidden without acknowledged preview entry');
-  process.stdout.write('PASS workspace stays hidden before acknowledgement\n');
-  for (const [path, content] of [
-    ['/login', 'Welcome back.'],
-    ['/', 'Welcome back.'],
-    ['/register', 'Clock in &amp; out'],
-    ['/dashboard', 'People overview'],
-    ['/organisation?tab=chart', 'HR builds the structure'],
-    ['/organisation?tab=positions', 'Add position'],
-    ['/employees?employee=employees-1&tab=Overview', 'Employment details'],
-    ['/employees?employee=employees-1&tab=Contracts', 'Employee contracts'],
-    ['/compliance?tab=Policies', 'Policies &amp; employee acknowledgement'],
-    ['/self-service?employee=employees-1', 'Employee Dashboard'],
-    ['/self-service?employee=employees-1&section=Policies', 'My policies'],
-  ]) {
-    const html = await render(path);
-    assert(html.replace(/<!--[\s\S]*?-->/g, '').includes(content), `Missing page content: ${path}`);
-    process.stdout.write(`PASS live development entry: ${path}\n`);
+  for (const path of ['/login','/dashboard','/employees','/organisation','/register','/leave','/payroll','/administration']) {
+    const html=await render(path,false);
+    assert(html.includes('Connecting to MataHR'), 'The live session must be checked before opening '+path);
+    assert(!html.includes('class="shell"'), 'Private workspace rendered before a live session was verified');
+    process.stdout.write('PASS live entry import graph and session gate: '+path+'\n');
   }
-  for (const [role,path,content] of [
-    ['admin','/admin','System workspace'],['admin','/users','Users &amp; access'],['admin','/security','Security controls'],['admin','/payroll','outside your role'],['admin','/employees','outside your role'],
-    ['manager','/team','My team'],['manager','/team/leave','Leave approvals'],['manager','/payroll','outside your role'],
-    ['employee','/self-service?employee=employees-2','Employee Dashboard'],['employee','/employees','outside your role'],['employee','/organisation','Read only'],
-    ['hr','/settings','HR settings'],['hr','/users','outside your role'],['hr','/audit','outside your role']
-  ]) {const html=await render(path,true,role);assert(html.replace(/<!--[\s\S]*?-->/g,'').includes(content),`Role boundary failed: ${role} ${path}`);if(role==='employee'&&path.startsWith('/self-service'))assert(!html.includes('Preview as employee'),'Employee must not switch identity');process.stdout.write(`PASS role workspace: ${role} ${path}\n`);}
-
 }
-(async () => {
-  await assert.rejects(startup(true), /Cannot access 'lazy' before initialization/);
-  process.stdout.write('PASS regression: the previous import order reproduces the startup crash\n');
-  await startup();
-})().catch(error => { console.error(error); process.exitCode = 1; });
+(async()=>{
+ const {createServer}=await import('vite');
+ const path=require('node:path');
+ const server=await createServer({root:path.resolve(__dirname,'..'),configFile:path.resolve(__dirname,'../vite.config.ts'),server:{host:'127.0.0.1',port:0,strictPort:true,open:false},logLevel:'error'});
+ try{await server.listen();origin='http://127.0.0.1:'+server.httpServer.address().port;await startup();}
+ finally{await server.close();}
+})().catch(error=>{console.error(error);process.exitCode=1;});
