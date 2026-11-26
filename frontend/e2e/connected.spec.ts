@@ -62,6 +62,7 @@ test('Admin workspace manages native accounts and respects payroll boundaries', 
   await expect(page.getByRole('heading', { name: 'Recent audit events' })).toBeVisible();
   await page.getByRole('link', { name: 'User management', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Assigned accounts' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add user', exact: true }).click();
   const form = page
     .locator('form')
     .filter({ has: page.getByRole('heading', { name: 'Create account' }) });
@@ -69,14 +70,10 @@ test('Admin workspace manages native accounts and respects payroll boundaries', 
   await form.getByLabel('Initial password', { exact: false }).fill('Browser-Created-Account42!');
   await form.getByLabel('Employee', { exact: true }).uncheck();
   await form.getByLabel('HR', { exact: true }).check();
-  await form.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(
-    page.getByRole('cell', { name: 'browser-hr@example.invalid', exact: true }),
-  ).toBeVisible();
+  await form.getByRole('button', { name: 'Create user', exact: true }).click();
+  await expect(page.getByText('browser-hr@example.invalid', { exact: true })).toBeVisible();
   await page.reload();
-  await expect(
-    page.getByRole('cell', { name: 'browser-hr@example.invalid', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText('browser-hr@example.invalid', { exact: true })).toBeVisible();
 });
 
 test('HR creates a persistent employee, organisation records and dated payroll inputs', async ({

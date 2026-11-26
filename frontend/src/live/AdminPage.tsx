@@ -1,7 +1,8 @@
+import { UserManagement } from './UserManagement';
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { api, useApi, can, type Session, type Page, type Account, type Role } from './api';
-import { ActionForm, field, optional, TextField, Loading, Empty } from './shared';
+import { api, useApi, can, type Session, type Page, type Role } from './api';
+import { ActionForm, field, Loading, Empty } from './shared';
 type ImportPreview = {
   id: string;
   kind: string;
@@ -19,9 +20,7 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
   const [search] = useSearchParams();
   const tab = section === 'permissions' || section === 'audit' ? section : 'users';
   const setTab = (value: string) => navigate('/administration/' + value);
-  const [selected, setSelected] = useState<Account | null>(null),
-    [offset, setOffset] = useState(0),
-    [role, setRole] = useState<Role>(
+  const [role, setRole] = useState<Role>(
       ['Admin', 'HR', 'Manager', 'Employee'].includes(search.get('role') ?? '')
         ? (search.get('role') as Role)
         : 'HR',
@@ -29,13 +28,7 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
     [kind, setKind] = useState(can(session, 'Accounts') ? 'Accounts' : 'Employees'),
     [preview, setPreview] = useState<ImportPreview | null>(null),
     [credentials, setCredentials] = useState<{ email: string; temporaryPassword: string }[]>([]);
-  const accounts = useApi<Page<Account>>(
-      !imports && tab === 'users' ? '/admin/accounts?maxResultCount=25&skipCount=' + offset : null,
-    ),
-    links = useApi<{ id: string; number: string; name: string }[]>(
-      !imports && tab === 'users' ? '/admin/employee-links' : null,
-    ),
-    permissions = useApi<{ permission: string; granted: boolean }[]>(
+  const permissions = useApi<{ permission: string; granted: boolean }[]>(
       !imports && tab === 'permissions' ? '/admin/role-permissions?role=' + role : null,
     ),
     audit = useApi<
@@ -204,142 +197,7 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
           </button>
         ))}
       </div>
-      {tab === 'users' && (
-        <>
-          <Loading error={accounts.error || links.error} loading={accounts.loading} />
-          <section className="card">
-            <h2>Assigned accounts</h2>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Email</th>
-                    <th>Roles</th>
-                    <th>State</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.data?.items.map((account) => (
-                    <tr key={account.id}>
-                      <td>{account.email}</td>
-                      <td>{account.roles.join(', ')}</td>
-                      <td>{account.active ? 'Active' : 'Inactive'}</td>
-                      <td>
-                        {account.id !== session.id ? (
-                          <button className="secondary" onClick={() => setSelected(account)}>
-                            Edit access
-                          </button>
-                        ) : (
-                          <span>Your account</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="form-actions">
-              <button
-                className="secondary"
-                disabled={offset === 0}
-                onClick={() => setOffset((n) => n - 25)}
-              >
-                Previous
-              </button>
-              <span>{accounts.data?.totalCount ?? 0} accounts</span>
-              <button
-                className="secondary"
-                disabled={offset + 25 >= (accounts.data?.totalCount ?? 0)}
-                onClick={() => setOffset((n) => n + 25)}
-              >
-                Next
-              </button>
-            </div>
-          </section>
-          <section className="card" id="account-form">
-            <ActionForm
-              key={selected?.id ?? 'new'}
-              title={selected ? 'Edit ' + selected.email : 'Create account'}
-              onSave={async (data) => {
-                const body = {
-                  roles: data.getAll('roles'),
-                  employeeId: optional(data, 'employeeId'),
-                  ...(selected
-                    ? { active: data.has('active'), concurrencyStamp: selected.concurrencyStamp }
-                    : { email: field(data, 'email'), password: field(data, 'password') }),
-                };
-                await api(
-                  selected ? '/admin/accounts/' + selected.id : '/admin/accounts',
-                  selected ? 'PUT' : 'POST',
-                  body,
-                );
-                accounts.reload();
-                setSelected(null);
-              }}
-            >
-              {!selected && (
-                <>
-                  <TextField label="Work email" name="email" type="email" />
-                  <label>
-                    Initial password
-                    <input
-                      name="password"
-                      type="password"
-                      autoComplete="new-password"
-                      minLength={14}
-                      required
-                    />
-                    <small>
-                      At least 14 characters, with upper/lowercase letters, a digit and a symbol.
-                    </small>
-                  </label>
-                </>
-              )}
-              <label>
-                Employee link
-                <select name="employeeId" defaultValue={selected?.employeeId ?? ''}>
-                  <option value="">Not linked</option>
-                  {links.data?.map((person) => (
-                    <option key={person.id} value={person.id}>
-                      {person.number} · {person.name}
-                    </option>
-                  ))}
-                </select>
-                <small>Employee and Manager roles require an employee link.</small>
-              </label>
-              <fieldset>
-                <legend>Assigned roles</legend>
-                {(['Admin', 'HR', 'Manager', 'Employee'] as Role[]).map((r) => (
-                  <label className="live-check" key={r}>
-                    <input
-                      name="roles"
-                      type="checkbox"
-                      value={r}
-                      defaultChecked={
-                        selected?.roles.includes(r) ??
-                        r === (search.get('createRole') === 'HR' ? 'HR' : 'Employee')
-                      }
-                    />
-                    {r}
-                  </label>
-                ))}
-              </fieldset>
-              {selected && (
-                <label className="live-check">
-                  <input type="checkbox" name="active" defaultChecked={selected.active} />
-                  Account active
-                </label>
-              )}
-            </ActionForm>
-            {selected && (
-              <button className="secondary" onClick={() => setSelected(null)}>
-                Cancel editing
-              </button>
-            )}
-          </section>
-        </>
-      )}
+      {tab === 'users' && <UserManagement session={session} />}
       {tab === 'permissions' && (
         <section className="card">
           <h2>Role permissions</h2>
