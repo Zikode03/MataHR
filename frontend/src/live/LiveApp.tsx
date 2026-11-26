@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, lazy, Suspense } from 'react';
-import { Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import {
   LogOut,
   Users,
@@ -10,6 +10,14 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Menu,
+  ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Building2,
+  X,
+  FileClock,
+  UserRoundCog,
+  Import,
 } from 'lucide-react';
 import { LoginPage } from '../auth/LoginPage';
 import { api, ApiError, can, message, type Session, type Role } from './api';
@@ -38,6 +46,8 @@ const AdminPage = lazy(() =>
 
 export function LiveApp() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
   const [session, setSession] = useState<Session | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
@@ -46,6 +56,32 @@ export function LiveApp() {
     [busy, setBusy] = useState(false),
     [role, setRole] = useState<Role>('Employee'),
     [menu, setMenu] = useState(false);
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenu(false);
+    };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, []);
+  useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 760px)');
+    const resized = () => {
+      if (!mobile.matches) setMenu(false);
+    };
+    mobile.addEventListener('change', resized);
+    return () => mobile.removeEventListener('change', resized);
+  }, []);
+  useEffect(() => {
+    if (!menu) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement;
+    document.body.style.overflow = 'hidden';
+    document.querySelector<HTMLAnchorElement>('.live-sidebar nav a')?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, [menu]);
   const loadSession = useCallback(async () => {
     const account = await api<Session>('/auth/me');
     setSession(account);
@@ -337,7 +373,7 @@ export function LiveApp() {
     {
       to: '/administration/users',
       label: 'User management',
-      icon: ShieldCheck,
+      icon: UserRoundCog,
       show: admin && can(session, 'Accounts'),
     },
     {
@@ -349,78 +385,171 @@ export function LiveApp() {
     {
       to: '/administration/audit',
       label: 'Audit trail',
-      icon: Clock3,
+      icon: FileClock,
       show: admin && can(session, 'Accounts') && can(session, 'Audit'),
     },
     {
       to: '/imports',
       label: 'Legacy import',
-      icon: Users,
+      icon: Import,
       show:
         (admin && can(session, 'Accounts')) ||
         (hr && can(session, 'People.Write') && can(session, 'Organisation.Write')),
     },
   ].filter((x) => x.show);
+  const currentPage =
+    nav.find((item) => location.pathname === item.to || location.pathname.startsWith(item.to + '/'))
+      ?.label ??
+    (location.pathname.startsWith('/administration') ? 'User management' : 'Workspace');
+  const roleName = admin
+    ? 'System administrator'
+    : hr
+      ? 'Human resources'
+      : manager
+        ? 'Manager'
+        : 'Employee';
   return (
-    <div className="shell live-shell">
+    <div className={'shell live-shell ' + (collapsed ? 'live-shell-collapsed' : '')}>
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <aside className={'sidebar live-sidebar ' + (menu ? 'open' : '')}>
-        <Link to="/dashboard" className="live-logo">
+      {menu && (
+        <button
+          className="live-nav-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMenu(false)}
+        />
+      )}
+      <aside id="workspace-navigation" className={'sidebar live-sidebar ' + (menu ? 'open' : '')}>
+        <Link to="/dashboard" className="live-logo" aria-label="MataHR home">
           <img src="/brand/matateni-emblem.png" alt="" />
-          <strong>
-            Mata<span>HR</span>
-          </strong>
+          <div className="live-wordmark">
+            <strong>
+              Mata<span>HR</span>
+            </strong>
+            <small>BY MATATENI</small>
+          </div>
         </Link>
-        <p className="eyebrow">{role} workspace</p>
-        <nav>
-          {nav.map((item) => (
-            <NavLink key={item.to} to={item.to} onClick={() => setMenu(false)}>
-              <item.icon size={20} />
-              {item.label}
-            </NavLink>
-          ))}
+        <button
+          className="live-mobile-close"
+          aria-label="Close menu"
+          onClick={() => setMenu(false)}
+        >
+          <X size={19} />
+        </button>
+        <div className="live-organisation">
+          <span>
+            <Building2 size={18} />
+          </span>
+          <div>
+            <strong>Matateni Technologies</strong>
+            <small>{roleName}</small>
+          </div>
+        </div>
+        <nav aria-label="Main navigation">
+          {['Workspace', 'Administration'].map((group) => {
+            const items = nav.filter(
+              (item) =>
+                (item.to.startsWith('/administration') || item.to === '/imports') ===
+                (group === 'Administration'),
+            );
+            return (
+              items.length > 0 && (
+                <div className="live-nav-section" key={group}>
+                  <p>{group}</p>
+                  {items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      aria-label={item.label}
+                      title={collapsed ? item.label : undefined}
+                      onClick={() => setMenu(false)}
+                    >
+                      <item.icon size={19} aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )
+            );
+          })}
         </nav>
         <div className="live-sidebar-bottom">
-          <small>Signed in as</small>
-          <strong>{session.email}</strong>
-          <button className="secondary" disabled={busy} onClick={signOut}>
-            <LogOut size={16} />
-            Sign out
-          </button>
+          <ShieldCheck size={17} />
+          <div>
+            <strong>Secure workspace</strong>
+            <small>Access managed by your organisation</small>
+          </div>
         </div>
       </aside>
-      <div className="content">
-        <header>
+      <div className="content" inert={menu || undefined}>
+        <header className="live-header">
           <button
             className="menu-toggle"
             aria-label="Toggle navigation"
+            aria-expanded={menu}
+            aria-controls="workspace-navigation"
             onClick={() => setMenu(!menu)}
           >
             <Menu size={20} />
           </button>
-          <span className="workspace-title">
-            Matateni Technologies <span>/ People workspace</span>
-          </span>
-          {session.roles.length > 1 ? (
-            <label className="live-role-switch">
-              Workspace
-              <select
-                value={role}
-                onChange={(e) => {
-                  setRole(e.target.value as Role);
-                  navigate('/dashboard');
-                }}
-              >
-                {session.roles.map((r) => (
-                  <option key={r}>{r}</option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <span className="live-role-label">{role}</span>
-          )}
+          <button
+            className="live-sidebar-toggle"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-controls="workspace-navigation"
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+          </button>
+          <div className="live-header-context">
+            <span>{admin ? 'System administration' : roleName + ' workspace'}</span>
+            <strong>{currentPage}</strong>
+          </div>
+          <div className="live-header-actions">
+            {session.roles.length > 1 ? (
+              <label className="live-role-switch">
+                <span className="live-workspace-label">Workspace</span>
+                <select
+                  value={role}
+                  onChange={(e) => {
+                    setRole(e.target.value as Role);
+                    setMenu(false);
+                    navigate('/dashboard');
+                  }}
+                >
+                  {session.roles.map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <span className="live-role-label">
+                <span />
+                {role === 'HR' ? 'Human resources' : role}
+              </span>
+            )}
+            <details className="live-account-menu" key={location.pathname}>
+              <summary aria-label="Account menu">
+                <span className="live-account-avatar">
+                  {session.email.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="live-account-identity">
+                  <strong>{roleName}</strong>
+                  <small>{session.email}</small>
+                </span>
+                <ChevronDown size={15} />
+              </summary>
+              <div className="live-account-popover">
+                <strong>{session.email}</strong>
+                <span>{roleName}</span>
+                <button disabled={busy} onClick={signOut}>
+                  <LogOut size={16} />
+                  Sign out
+                </button>
+              </div>
+            </details>
+          </div>
         </header>
         <main id="main-content">
           {error && (

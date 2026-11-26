@@ -19,7 +19,9 @@ async function login(page: Page, email: string) {
   ).toBeVisible();
   if (await acknowledgement.isVisible()) await acknowledgement.click();
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 30000 });
+  await page.getByLabel('Account menu', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeEnabled();
+  await page.getByLabel('Account menu', { exact: true }).click();
 }
 async function post(page: Page, path: string, body: unknown) {
   const response = await page.request.post('/api' + path, {
@@ -39,6 +41,17 @@ test('Admin workspace manages native accounts and respects payroll boundaries', 
   expect((await page.request.get('/api/payroll/salaries')).status()).toBe(403);
   await expect(page.getByRole('heading', { name: 'Set up your people workspace' })).toBeVisible();
   await expect(page.getByLabel('Account overview')).toContainText('Total accounts');
+  await expect(page.locator('.live-header-context')).toContainText('System overview');
+  await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+  await expect(page.locator('.live-sidebar')).toHaveCSS('width', '80px');
+  await page.getByRole('button', { name: 'Expand sidebar', exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Toggle navigation', exact: true }).click();
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+  await expect(page.locator('.content')).toHaveAttribute('inert', '');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeHidden();
+  await page.setViewportSize({ width: 1280, height: 720 });
   const overviewResponse = await page.request.get('/api/admin/overview');
   expect(overviewResponse.status()).toBe(200);
   const overview = await overviewResponse.json();
