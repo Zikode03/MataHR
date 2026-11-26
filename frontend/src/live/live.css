@@ -715,3 +715,31 @@
   .live-shell-collapsed .live-sidebar-bottom { justify-content: flex-start; padding: 18px 24px; }
 }
 @media(prefers-reduced-motion:reduce) { .live-shell .live-sidebar { transition: none; } }
+
+/* Compact administration dashboard: actions first, with naturally sized panels. */
+.admin-overview { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(300px,.9fr); grid-template-areas: 'metrics metrics' 'setup setup' 'accounts roles' 'activity roles' 'import import'; gap: 20px; align-items: start; }
+.admin-overview .card { margin: 0; padding: 24px; box-shadow: none; border-radius: 8px; }
+.admin-overview .admin-metrics { grid-area: metrics; margin: 0; gap: 16px; }
+.admin-overview .admin-metric { padding: 18px 20px; border-radius: 8px; }
+.admin-overview .admin-metric > strong { font-size: 28px; margin: 12px 0 5px; }
+.admin-overview .admin-setup { grid-area: setup; display: flex; align-items: center; gap: 16px; padding: 20px 24px; background: #fcfafb; border-color: #e9e0e4; }
+.admin-setup-icon { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border: 1px solid #eadde2; border-radius: 8px; background: #fff; color: #8a4151; }
+.admin-overview .admin-setup > div { flex: 1; min-width: 0; }
+.admin-overview .admin-setup h2 { margin: 0 0 5px; font-size: 16px; }
+.admin-overview .admin-setup p { margin: 0; font-size: 14px; line-height: 1.6; }
+.admin-overview .admin-setup > a { display: inline-flex; align-items: center; gap: 8px; flex: none; background: #fff; color: #864052; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.admin-overview .admin-workspace-grid { display: contents; }
+.admin-workspace-grid > section:first-child { grid-area: accounts; }
+.admin-workspace-grid > section:last-child { grid-area: roles; }
+.admin-overview > section:not(.admin-setup) { grid-area: activity; }
+.admin-overview .admin-section-head { margin-bottom: 18px; }
+.admin-overview .admin-section-head h2 { font-size: 17px; }
+.admin-overview .admin-account-list { margin-bottom: 18px; }
+.admin-overview .admin-account-list > a { padding: 13px 0; }
+.admin-overview .admin-role-list > a { padding: 13px 0; }
+.admin-overview .admin-footnote { padding-top: 14px; margin-top: 0; }
+.admin-overview .admin-empty { padding: 8px 0 0; align-items: flex-start; }
+.admin-overview .admin-empty > svg { width: 20px; height: 20px; flex: none; margin-top: 3px; }
+.admin-overview .admin-import-strip { grid-area: import; padding: 4px 0 0; }
+@media(max-width:1100px) { .admin-overview { grid-template-columns: minmax(0,1fr); grid-template-areas: 'metrics' 'setup' 'accounts' 'roles' 'activity' 'import'; } .admin-overview .admin-setup { flex-wrap: wrap; } .admin-overview .admin-setup > a { margin-left: 58px; } }
+@media(max-width:600px) { .admin-overview { gap: 16px; } .admin-overview .card { padding: 20px; } .admin-overview .admin-metric { padding: 16px; } .admin-overview .admin-setup { align-items: flex-start; } .admin-overview .admin-setup-icon { display: none; } .admin-overview .admin-setup > a { margin-left: 0; } }
