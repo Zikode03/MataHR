@@ -176,11 +176,17 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
       </>
     );
   return (
-    <>
+    <div className={'admin-settings-page admin-settings-' + tab}>
       <div className="page-head">
         <div>
           <div className="eyebrow">SYSTEM ADMINISTRATION</div>
-          <h1>Users & access</h1>
+          <h1>
+            {tab === 'users'
+              ? 'User management'
+              : tab === 'permissions'
+                ? 'Roles & permissions'
+                : 'Audit trail'}
+          </h1>
           <p>
             Assign accounts and permissions without granting automatic access to confidential HR
             records.
@@ -310,7 +316,10 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
                       name="roles"
                       type="checkbox"
                       value={r}
-                      defaultChecked={selected?.roles.includes(r) ?? r === 'Employee'}
+                      defaultChecked={
+                        selected?.roles.includes(r) ??
+                        r === (search.get('createRole') === 'HR' ? 'HR' : 'Employee')
+                      }
                     />
                     {r}
                   </label>
@@ -358,7 +367,10 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
             >
               <label className="live-check">
                 <input type="checkbox" name="granted" defaultChecked={grant.granted} />
-                {grant.permission}
+                {grant.permission
+                  .replace(/^Workforce\./, '')
+                  .replaceAll('.', ' · ')
+                  .replace(/([a-z])([A-Z])/g, ' ')}
               </label>
             </ActionForm>
           ))}
@@ -392,6 +404,6 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
           </div>
         </section>
       )}
-    </>
+    </div>
   );
 }

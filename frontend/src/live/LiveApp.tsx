@@ -18,6 +18,7 @@ import {
   FileClock,
   UserRoundCog,
   Import,
+  Settings2,
 } from 'lucide-react';
 import { LoginPage } from '../auth/LoginPage';
 import { api, ApiError, can, message, type Session, type Role } from './api';
@@ -43,11 +44,15 @@ const PayrollPage = lazy(() =>
 const AdminPage = lazy(() =>
   import('./AdminPage').then((module) => ({ default: module.AdminPage })),
 );
+const SettingsPage = lazy(() =>
+  import('./SettingsPage').then((module) => ({ default: module.SettingsPage })),
+);
 
 export function LiveApp() {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [compact, setCompact] = useState(false);
   const [session, setSession] = useState<Session | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
@@ -56,6 +61,22 @@ export function LiveApp() {
     [busy, setBusy] = useState(false),
     [role, setRole] = useState<Role>('Employee'),
     [menu, setMenu] = useState(false);
+  useEffect(() => {
+    const read = () => {
+      try {
+        setCompact(
+          !!session &&
+            localStorage.getItem('matahr:density:' + session.tenantId + ':' + session.id) ===
+              'compact',
+        );
+      } catch {
+        setCompact(false);
+      }
+    };
+    read();
+    window.addEventListener('matahr:preferences-changed', read);
+    return () => window.removeEventListener('matahr:preferences-changed', read);
+  }, [session?.id, session?.tenantId]);
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setMenu(false);
@@ -396,11 +417,16 @@ export function LiveApp() {
         (admin && can(session, 'Accounts')) ||
         (hr && can(session, 'People.Write') && can(session, 'Organisation.Write')),
     },
+    { to: '/settings/general', label: 'Settings', icon: Settings2, show: true },
   ].filter((x) => x.show);
   const currentPage =
     nav.find((item) => location.pathname === item.to || location.pathname.startsWith(item.to + '/'))
       ?.label ??
-    (location.pathname.startsWith('/administration') ? 'User management' : 'Workspace');
+    (location.pathname.startsWith('/settings')
+      ? 'Settings'
+      : location.pathname.startsWith('/administration')
+        ? 'User management'
+        : 'Workspace');
   const roleName = admin
     ? 'System administrator'
     : hr
@@ -409,7 +435,13 @@ export function LiveApp() {
         ? 'Manager'
         : 'Employee';
   return (
-    <div className={'shell live-shell ' + (collapsed ? 'live-shell-collapsed' : '')}>
+    <div
+      className={
+        'shell live-shell ' +
+        (collapsed ? 'live-shell-collapsed ' : '') +
+        (compact ? 'live-compact' : '')
+      }
+    >
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
@@ -450,7 +482,9 @@ export function LiveApp() {
           {['Workspace', 'Administration'].map((group) => {
             const items = nav.filter(
               (item) =>
-                (item.to.startsWith('/administration') || item.to === '/imports') ===
+                (item.to.startsWith('/administration') ||
+                  item.to === '/imports' ||
+                  (admin && item.to.startsWith('/settings'))) ===
                 (group === 'Administration'),
             );
             return (
@@ -561,6 +595,20 @@ export function LiveApp() {
           <Suspense fallback={<p role="status">Loading workspace…</p>}>
             <Routes>
               <Route path="/dashboard" element={<HomePage session={session} role={role} />} />
+              <Route
+                path="/settings/:section?"
+                element={
+                  <SettingsPage
+                    key={location.pathname}
+                    session={session}
+                    onPasswordChanged={() => {
+                      setSession(null);
+                      setError('Password updated. Sign in with your new password.');
+                      navigate('/login', { replace: true });
+                    }}
+                  />
+                }
+              />
               <Route
                 path="/employees/*"
                 element={

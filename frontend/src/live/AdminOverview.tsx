@@ -1,5 +1,16 @@
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Users, ShieldCheck, UserCheck, LockKeyhole, ArrowRight } from 'lucide-react';
+import {
+  Users,
+  UserCheck,
+  UserRoundX,
+  LockKeyhole,
+  ArrowUpRight,
+  Plus,
+  ShieldCheck,
+  Settings2,
+  FileClock,
+  ArrowRight,
+} from 'lucide-react';
 import { can, useApi, type Session, type Page, type Account } from './api';
 import { Loading } from './shared';
 
@@ -10,217 +21,239 @@ type Overview = {
   lockedAccounts: number;
   roles: { role: string; count: number }[];
 };
-type Event = { id: string; actorId: string; action: string; targetId: string; at: string };
-const roleNames: Record<string, string> = {
-  Admin: 'System administrators',
-  HR: 'Human resources',
-  Manager: 'Managers',
-  Employee: 'Employees',
-};
-const roleDetails: Record<string, string> = {
-  Admin: 'Accounts, permissions and system audit',
-  HR: 'People, contracts and HR operations',
-  Manager: 'Team requests and approvals',
-  Employee: 'Personal information and requests',
-};
-
+type AuditEvent = { id: string; actorId: string; action: string; at: string };
+const roles = [
+  { key: 'Admin', name: 'System administrators', description: 'System access and configuration' },
+  { key: 'HR', name: 'Human resources', description: 'Employee records and HR operations' },
+  { key: 'Manager', name: 'Managers', description: 'Team requests and approvals' },
+  { key: 'Employee', name: 'Employees', description: 'Personal records and self-service' },
+];
 export function AdminOverview({ session }: { session: Session }) {
   const overview = useApi<Overview>(can(session, 'Accounts') ? '/admin/overview' : null);
   const accounts = useApi<Page<Account>>(
     can(session, 'Accounts') ? '/admin/accounts?maxResultCount=5' : null,
   );
-  const events = useApi<Page<Event>>(
-    can(session, 'Audit') ? '/admin/audit?maxResultCount=5' : null,
+  const events = useApi<Page<AuditEvent>>(
+    can(session, 'Audit') ? '/admin/audit?maxResultCount=4' : null,
   );
   const data = overview.data;
-  const hrReady = !!data?.roles.some((r) => r.role === 'HR' && r.count > 0);
+  const needsHr = data && !data.roles.some((r) => r.role === 'HR' && r.count > 0);
   return (
-    <>
+    <div className="admin-dashboard-v2">
       <Loading loading={overview.loading} error={overview.error} />
-      <div className="admin-overview">
-        <div className="admin-metrics" aria-label="Account overview">
-          {[
-            {
-              label: 'Total accounts',
-              value: data?.totalAccounts,
-              icon: Users,
-              detail: 'All registered users',
-            },
-            {
-              label: 'Active accounts',
-              value: data?.activeAccounts,
-              icon: UserCheck,
-              detail: 'Enabled for sign-in',
-            },
-            {
-              label: 'Inactive accounts',
-              value: data?.inactiveAccounts,
-              icon: ShieldCheck,
-              detail: 'Access disabled',
-            },
-            {
-              label: 'Locked accounts',
-              value: data?.lockedAccounts,
-              icon: LockKeyhole,
-              detail: 'Temporary sign-in lockouts',
-            },
-          ].map((item) => (
-            <div className="admin-metric" key={item.label}>
-              <div>
-                <span>{item.label}</span>
-                <item.icon size={18} aria-hidden="true" />
-              </div>
+      <div className="admin-v2-metrics" aria-label="Account overview">
+        {[
+          { label: 'Total accounts', value: data?.totalAccounts, icon: Users },
+          { label: 'Active', value: data?.activeAccounts, icon: UserCheck },
+          { label: 'Inactive', value: data?.inactiveAccounts, icon: UserRoundX },
+          { label: 'Locked', value: data?.lockedAccounts, icon: LockKeyhole },
+        ].map((item) => (
+          <div key={item.label}>
+            <span className="admin-v2-metric-icon">
+              <item.icon size={19} />
+            </span>
+            <div>
+              <span>{item.label}</span>
               <strong>{item.value ?? '—'}</strong>
-              <small>{item.detail}</small>
             </div>
-          ))}
-        </div>
-        <section className="card admin-setup">
-          <span className="admin-setup-icon">
-            <ShieldCheck size={22} aria-hidden="true" />
-          </span>
+          </div>
+        ))}
+      </div>
+      {needsHr && (
+        <section className="admin-v2-setup">
+          <ShieldCheck size={24} />
           <div>
             <h2>Set up your people workspace</h2>
-            <p>
-              {data
-                ? hrReady
-                  ? 'HR roles are assigned. Manage accounts and review access as your team grows.'
-                  : 'Create an HR account so your team can add employees and manage daily HR operations.'
-                : 'Checking your organisation’s account setup…'}
-            </p>
+            <p>Add an HR account to start managing employee records and daily operations.</p>
           </div>
-          <Link className="secondary" to="/administration/users#account-form">
-            {hrReady ? 'Manage accounts' : 'Create HR account'} <ArrowRight size={15} />
+          <Link to="/administration/users?createRole=HR#account-form">
+            Create HR account <ArrowRight size={16} />
           </Link>
         </section>
-        <div className="admin-workspace-grid">
-          <section className="card">
-            <div className="admin-section-head">
+      )}
+      <div className="admin-v2-columns">
+        <div className="admin-v2-main">
+          <section className="admin-v2-panel">
+            <div className="admin-v2-panel-head">
               <div>
-                <h2>Accounts & access</h2>
-                <p>Manage who can use MataHR.</p>
+                <h2>User accounts</h2>
+                <p>People with access to your workspace.</p>
               </div>
-              <Link to="/administration/users">
-                View all <ArrowUpRight size={16} />
+              <Link className="primary" to="/administration/users#account-form">
+                <Plus size={16} />
+                Add user
               </Link>
             </div>
             <Loading loading={accounts.loading} error={accounts.error} />
-            <div className="admin-account-list">
-              {accounts.data?.items.map((account) => (
-                <Link to="/administration/users" key={account.id}>
-                  <span className="admin-account-avatar">
-                    {account.email.slice(0, 1).toUpperCase()}
-                  </span>
-                  <div>
-                    <strong>{account.email}</strong>
-                    <small>
-                      {account.roles.join(' · ')}
-                      {account.id === session.id ? ' · You' : ''}
-                    </small>
-                  </div>
-                  <span className={'admin-status ' + (account.active ? 'is-active' : '')}>
-                    {account.active ? 'Active' : 'Inactive'}
-                  </span>
-                </Link>
-              ))}
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Account</th>
+                    <th>Assigned roles</th>
+                    <th>Status</th>
+                    <th>
+                      <span className="sr-only">Manage</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accounts.data?.items.map((account) => (
+                    <tr key={account.id}>
+                      <td>
+                        <div className="admin-v2-person">
+                          <span>{account.email[0]?.toUpperCase()}</span>
+                          <div>
+                            <strong>{account.email}</strong>
+                            {account.id === session.id && <small>Your account</small>}
+                          </div>
+                        </div>
+                      </td>
+                      <td>{account.roles.join(', ')}</td>
+                      <td>
+                        <span className={'admin-v2-badge ' + (account.active ? 'enabled' : '')}>
+                          {account.active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td>
+                        <Link to="/administration/users" aria-label={'Manage ' + account.email}>
+                          <ArrowUpRight size={17} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <Link className="primary" to="/administration/users#account-form">
-              Add a user
+            {accounts.data?.items.length === 0 && (
+              <p className="admin-v2-empty">No accounts to display.</p>
+            )}
+            <Link className="admin-v2-panel-footer" to="/administration/users">
+              Manage all accounts <ArrowRight size={15} />
             </Link>
           </section>
-          <section className="card">
-            <div className="admin-section-head">
+          <section className="admin-v2-panel">
+            <div className="admin-v2-panel-head">
               <div>
-                <h2>Roles & permissions</h2>
-                <p>Four workspaces with separate responsibilities.</p>
+                <h2>Workspace roles</h2>
+                <p>Access follows each person’s responsibilities.</p>
               </div>
-              <ShieldCheck size={20} aria-hidden="true" />
+              <Link to="/administration/permissions">
+                Manage permissions <ArrowUpRight size={15} />
+              </Link>
             </div>
-            <div className="admin-role-list">
-              {(
-                data?.roles ??
-                ['Admin', 'HR', 'Manager', 'Employee'].map((role) => ({ role, count: null }))
-              ).map((item) => (
-                <Link key={item.role} to={'/administration/permissions?role=' + item.role}>
+            <div className="admin-v2-roles">
+              {roles.map((role) => (
+                <Link key={role.key} to={'/administration/permissions?role=' + role.key}>
+                  <span className="admin-v2-role-count">
+                    {data?.roles.find((r) => r.role === role.key)?.count ?? '—'}
+                  </span>
                   <div>
-                    <strong>{roleNames[item.role]}</strong>
-                    <small>{roleDetails[item.role]}</small>
+                    <strong>{role.name}</strong>
+                    <small>{role.description}</small>
                   </div>
-                  <span>{item.count ?? '—'}</span>
                   <ArrowUpRight size={16} />
                 </Link>
               ))}
             </div>
-            <p className="admin-footnote">
-              A user can hold more than one role. System access does not automatically grant
-              personnel or payroll access.
+            <p className="admin-v2-policy-note">
+              <ShieldCheck size={15} />
+              System administration does not automatically grant access to personnel or payroll
+              records.
             </p>
           </section>
         </div>
-        <section className="card">
-          <div className="admin-section-head">
-            <div>
-              <h2>Recent activity</h2>
-              <p>Recorded changes across your organisation.</p>
+        <aside className="admin-v2-aside">
+          <section className="admin-v2-panel">
+            <div className="admin-v2-panel-head">
+              <h2>Administration</h2>
             </div>
-            {can(session, 'Audit') && (
-              <Link to="/administration/audit">
-                Open audit trail <ArrowUpRight size={16} />
-              </Link>
-            )}
-          </div>
-          {can(session, 'Audit') ? (
-            <>
-              <Loading loading={events.loading} error={events.error} />
-              {events.data && events.data.items.length === 0 && (
-                <div className="admin-empty">
-                  <ShieldCheck size={24} />
+            <div className="admin-v2-shortcuts">
+              {[
+                {
+                  to: '/administration/users',
+                  label: 'User management',
+                  detail: 'Create accounts and assign roles',
+                  icon: Users,
+                },
+                {
+                  to: '/settings/security',
+                  label: 'Account security',
+                  detail: 'Password and two-factor authentication',
+                  icon: ShieldCheck,
+                },
+                {
+                  to: '/settings/general',
+                  label: 'Workspace settings',
+                  detail: 'Organisation and display preferences',
+                  icon: Settings2,
+                },
+                {
+                  to: '/imports',
+                  label: 'Import existing accounts',
+                  detail: 'Review records before importing',
+                  icon: FileClock,
+                },
+              ].map((item) => (
+                <Link key={item.to} to={item.to}>
+                  <item.icon size={19} />
                   <div>
-                    <strong>No changes recorded yet</strong>
-                    <p>Account creation, access changes and workforce actions will appear here.</p>
+                    <strong>{item.label}</strong>
+                    <small>{item.detail}</small>
                   </div>
-                </div>
+                  <ArrowUpRight size={15} />
+                </Link>
+              ))}
+            </div>
+          </section>
+          <section className="admin-v2-panel">
+            <div className="admin-v2-panel-head">
+              <h2>Recent activity</h2>
+              {can(session, 'Audit') && (
+                <Link to="/administration/audit" aria-label="Open audit trail">
+                  <ArrowUpRight size={17} />
+                </Link>
               )}
-              <div className="admin-event-list">
-                {events.data?.items.map((event) => (
-                  <div key={event.id}>
-                    <span className="admin-event-dot" />
-                    <div>
-                      <strong>
-                        {event.action.replace(/([a-z])([A-Z])/g, '$1 $2').replaceAll('.', ' · ')}
-                      </strong>
-                      <small>
-                        {event.actorId === session.id ? 'By you' : 'By an authorised user'}
-                      </small>
-                    </div>
-                    <time dateTime={event.at}>
-                      {new Intl.DateTimeFormat('en-ZA', {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                        timeZone: 'Africa/Johannesburg',
-                      }).format(new Date(event.at))}
-                    </time>
+            </div>
+            {can(session, 'Audit') ? (
+              <>
+                <Loading loading={events.loading} error={events.error} />
+                {events.data?.items.length === 0 && (
+                  <div className="admin-v2-empty">
+                    <FileClock size={24} />
+                    <strong>No activity yet</strong>
+                    <p>Account and access changes will appear here.</p>
                   </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p>Audit access has not been assigned to this account.</p>
-          )}
-        </section>
-        <div className="admin-import-strip">
-          <div>
-            <strong>Bringing existing accounts into MataHR?</strong>
-            <p>
-              Review the source records before importing. Existing passwords and permissions are
-              preserved.
-            </p>
-          </div>
-          <Link to="/imports">
-            Review existing accounts <ArrowRight size={16} />
-          </Link>
-        </div>
+                )}
+                <div className="admin-v2-timeline">
+                  {events.data?.items.map((event) => (
+                    <div key={event.id}>
+                      <span />
+                      <div>
+                        <strong>
+                          {event.action.replace(/([a-z])([A-Z])/g, '$1 $2').replaceAll('.', ' · ')}
+                        </strong>
+                        <small>
+                          {event.actorId === session.id ? 'By you' : 'By an authorised user'} ·{' '}
+                          {new Intl.DateTimeFormat('en-ZA', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            timeZone: 'Africa/Johannesburg',
+                          }).format(new Date(event.at))}
+                        </small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="admin-v2-empty">Audit access is not assigned to this account.</p>
+            )}
+          </section>
+        </aside>
       </div>
-    </>
+    </div>
   );
 }
