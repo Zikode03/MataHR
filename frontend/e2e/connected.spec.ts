@@ -37,7 +37,17 @@ test('Admin workspace manages native accounts and respects payroll boundaries', 
   await expect(page.getByRole('heading', { name: 'System overview', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Employees', exact: true })).toHaveCount(0);
   expect((await page.request.get('/api/payroll/salaries')).status()).toBe(403);
-  await page.getByRole('link', { name: 'Users & permissions', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Set up your people workspace' })).toBeVisible();
+  await expect(page.getByLabel('Account overview')).toContainText('Total accounts');
+  const overviewResponse = await page.request.get('/api/admin/overview');
+  expect(overviewResponse.status()).toBe(200);
+  const overview = await overviewResponse.json();
+  expect(overview.totalAccounts).toBe(overview.activeAccounts + overview.inactiveAccounts);
+  await page.getByRole('link', { name: 'Roles & permissions', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Role permissions', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Audit trail', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Recent audit events' })).toBeVisible();
+  await page.getByRole('link', { name: 'User management', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Assigned accounts' })).toBeVisible();
   const form = page
     .locator('form')
@@ -105,6 +115,8 @@ test('Manager sees direct reports and cannot use system or payroll administratio
   await expect(page.getByRole('cell', { name: 'Outsider', exact: true })).toHaveCount(0);
   expect((await page.request.get('/api/admin/accounts')).status()).toBe(403);
   expect((await page.request.get('/api/payroll/salaries')).status()).toBe(403);
+  expect((await page.request.get('/api/admin/overview')).status()).toBe(403);
+  await expect(page.getByRole('link', { name: 'User management', exact: true })).toHaveCount(0);
 });
 
 test('Employee clocking uses real site code and GPS, and leave follows manager then HR review', async ({
@@ -145,7 +157,7 @@ test('Employee clocking uses real site code and GPS, and leave follows manager t
     await expect(code).toHaveText(/^\d{8}$/);
     const siteCode = (await code.textContent())!;
     await login(employee, 'alice');
-    await expect(employee.getByRole('link', { name: 'Users & permissions' })).toHaveCount(0);
+    await expect(employee.getByRole('link', { name: 'User management' })).toHaveCount(0);
     await employee.getByRole('link', { name: 'Digital register', exact: true }).click();
     await employee
       .getByRole('combobox', { name: 'Work location', exact: true })

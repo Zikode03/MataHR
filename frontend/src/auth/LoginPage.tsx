@@ -1,11 +1,10 @@
 import { initialAccounts, accountForEmail, roleLabels, type UserAccount } from './access';
 import type { PreviewDestination } from './previewSession';
 import { PrivacyNotice } from './PrivacyNotice';
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowUpRight,
-  ArrowRight,
   Eye,
   EyeOff,
   Mail,
@@ -22,6 +21,8 @@ type Props = {
   onContinue?: (destination: PreviewDestination, accountId?: string) => void;
   onAuthenticate?: (email: string, password: string) => Promise<void>;
   onRequestReset?: (email: string) => Promise<void>;
+  connectionNotice?: ReactNode;
+  signInDisabled?: boolean;
 };
 export function LoginPage({
   companyName = 'Matateni Technologies',
@@ -30,6 +31,8 @@ export function LoginPage({
   onContinue,
   onAuthenticate,
   onRequestReset,
+  connectionNotice,
+  signInDisabled = false,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [visible, setVisible] = useState(false),
@@ -93,7 +96,7 @@ export function LoginPage({
   }
 
   return (
-    <div className="login-page">
+    <div className="login-page login-refined">
       <a className="login-skip" href="#login-form">
         Skip to sign in
       </a>
@@ -158,6 +161,7 @@ export function LoginPage({
       <section className="login-form-panel">
         <div className="login-form-wrap">
           <h2>Welcome back.</h2>
+          {connectionNotice}
           <form id="login-form" onSubmit={submit}>
             <label htmlFor="login-email">Work email</label>
             <div className="login-input">
@@ -232,12 +236,12 @@ export function LoginPage({
                 {visible ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </div>
-            <button type="submit" className="login-submit" disabled={busy}>
+            <button type="submit" className="login-submit" disabled={busy || signInDisabled}>
               {busy ? 'Signing in…' : 'Sign in'}
-              <ArrowRight size={17} />
             </button>
             <p className="login-privacy-prompt">
-              Next: read and acknowledge the POPIA privacy notice to enter your workspace.
+              <LockKeyhole size={15} aria-hidden="true" />
+              Review the POPIA privacy notice after sign-in.
             </p>
             <p
               id="login-preview-note"
@@ -308,7 +312,7 @@ export function LoginPage({
             </>
           )}
           <p className="login-access-note">
-            New to the team? Contact your HR administrator for access.
+            Need access? Contact your HR administrator.
           </p>
         </div>
         <div className="login-bottomline">

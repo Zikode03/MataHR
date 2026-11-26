@@ -64,7 +64,11 @@ export function LiveApp() {
     Promise.allSettled([api<{ tenantId: string }>('/auth/config'), api<Session>('/auth/me')]).then(
       ([config, account]) => {
         if (!active) return;
-        if (config.status === 'fulfilled') setTenant(config.value.tenantId ?? '');
+        if (config.status === 'fulfilled') {
+          setTenant(config.value.tenantId ?? '');
+          if (!config.value.tenantId)
+            setError('Organisation setup is missing on the server. Contact your administrator.');
+        } else setError('Cannot connect to MataHR. Check that the backend is running, then retry.');
         if (account.status === 'fulfilled') {
           setSession(account.value);
           setRole(
@@ -104,6 +108,20 @@ export function LiveApp() {
     }
     await loadSession();
     navigate('/dashboard', { replace: true });
+  }
+  async function retryConnection() {
+    setBusy(true);
+    try {
+      const config = await api<{ tenantId: string }>('/auth/config');
+      if (!config.tenantId)
+        throw Error('Organisation setup is missing on the server. Contact your administrator.');
+      setTenant(config.tenantId);
+      setError('');
+    } catch (error) {
+      setError(message(error));
+    } finally {
+      setBusy(false);
+    }
   }
   async function signOut() {
     setBusy(true);
@@ -162,24 +180,23 @@ export function LiveApp() {
       <>
         <LoginPage
           onAuthenticate={signIn}
+          signInDisabled={!tenant || busy}
+          connectionNotice={
+            !tenant || error ? (
+              <div className="login-connection-notice" role="status">
+                <p>{error || 'Connecting to your organisation…'}</p>
+                {!tenant && (
+                  <button type="button" onClick={retryConnection} disabled={busy}>
+                    {busy ? 'Connecting…' : 'Retry connection'}
+                  </button>
+                )}
+              </div>
+            ) : undefined
+          }
           onRequestReset={async (email) => {
             await api('/auth/password/request-reset', 'POST', { tenantId: tenant, email });
           }}
         />
-        {(!tenant || error) && (
-          <aside className="live-connection">
-            <p role="alert">{error || 'Your organisation ID is required.'}</p>
-            <label>
-              Organisation ID
-              <input
-                value={tenant}
-                onChange={(e) => setTenant(e.target.value)}
-                placeholder="Organisation UUID"
-              />
-            </label>
-            <button onClick={() => window.location.reload()}>Retry connection</button>
-          </aside>
-        )}
       </>
     );
   }
@@ -303,25 +320,37 @@ export function LiveApp() {
       to: '/register',
       label: 'Digital register',
       icon: Clock3,
-      show: can(session, 'Attendance.Own'),
+      show: can(session, 'Attendance.Own') && (!admin || !!session.employeeId),
     },
     {
       to: '/leave',
       label: manager ? 'Leave & approvals' : 'Leave management',
       icon: CalendarDays,
-      show: can(session, 'Leave.Own'),
+      show: can(session, 'Leave.Own') && (!admin || !!session.employeeId),
     },
     {
       to: '/payroll',
       label: hr ? 'Payroll & benefits' : 'My payslips & benefits',
       icon: Wallet,
-      show: can(session, 'Payroll.Own'),
+      show: can(session, 'Payroll.Own') && (!admin || !!session.employeeId),
     },
     {
-      to: '/administration',
-      label: 'Users & permissions',
+      to: '/administration/users',
+      label: 'User management',
       icon: ShieldCheck,
       show: admin && can(session, 'Accounts'),
+    },
+    {
+      to: '/administration/permissions',
+      label: 'Roles & permissions',
+      icon: ShieldCheck,
+      show: admin && can(session, 'Accounts'),
+    },
+    {
+      to: '/administration/audit',
+      label: 'Audit trail',
+      icon: Clock3,
+      show: admin && can(session, 'Accounts') && can(session, 'Audit'),
     },
     {
       to: '/imports',
@@ -443,7 +472,7 @@ export function LiveApp() {
                 }
               />
               <Route
-                path="/administration"
+                path="/administration/:section?"
                 element={
                   admin && can(session, 'Accounts') ? <AdminPage session={session} /> : <Denied />
                 }

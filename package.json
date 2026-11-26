@@ -1,0 +1,13 @@
+{
+  "name": "MataHR",
+  "private": true,
+  "scripts": {
+    "postinstall": "npm --prefix frontend ci",
+    "dev": "npm --prefix frontend run dev",
+    "start": "npm --prefix frontend start",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "test": "npm --prefix frontend test",
+    "test:startup": "npm --prefix frontend run test:startup"
+  }
+}

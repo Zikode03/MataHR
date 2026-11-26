@@ -114,12 +114,20 @@ export async function api<T>(
   body?: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
+  const protection: Record<string, string> = {};
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
+    const token = await api<{ requestToken: string; headerName: string }>('/auth/antiforgery', 'GET', undefined, signal);
+    if (!token.requestToken || !token.headerName)
+      throw new Error('Could not secure this request. Refresh the page and try again.');
+    protection[token.headerName] = token.requestToken;
+  }
   const response = await fetch('/api' + path, {
     method,
     credentials: 'include',
     signal,
     headers: {
       'X-MataHR-Request': '1',
+      ...protection,
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

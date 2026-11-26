@@ -6,11 +6,11 @@ import {
   type Role,
   type Page,
   type Employee,
-  type Account,
   type WorkSession,
   type Policy,
 } from './api';
 import { Loading, Empty } from './shared';
+import { AdminOverview } from './AdminOverview';
 type Summary = {
   headcount: number;
   newJoiners: number;
@@ -24,9 +24,6 @@ type Summary = {
 export function HomePage({ session, role }: { session: Session; role: Role }) {
   const summary = useApi<Summary>(role === 'Admin' ? null : '/dashboard?' + periodQuery());
   const own = useApi<Employee>(session.employeeId ? '/employees/' + session.employeeId : null);
-  const accounts = useApi<Page<Account>>(
-    role === 'Admin' ? '/admin/accounts?maxResultCount=1' : null,
-  );
   const title =
     role === 'Admin'
       ? 'System overview'
@@ -43,7 +40,7 @@ export function HomePage({ session, role }: { session: Session; role: Role }) {
           <h1>{title}</h1>
           <p>
             {role === 'Admin'
-              ? 'Manage secure access to your organisation.'
+              ? 'Manage accounts, assign access and keep your organisation secure.'
               : role === 'HR'
                 ? 'Your workforce and the decisions that need attention.'
                 : role === 'Manager'
@@ -53,31 +50,9 @@ export function HomePage({ session, role }: { session: Session; role: Role }) {
         </div>
         <span>{new Intl.DateTimeFormat('en-ZA', { dateStyle: 'long' }).format(new Date())}</span>
       </div>
-      <Loading
-        loading={summary.loading || accounts.loading}
-        error={summary.error || accounts.error}
-      />
+      <Loading loading={summary.loading} error={summary.error} />
       {role === 'Admin' ? (
-        <>
-          <section className="card">
-            <h2>Access administration</h2>
-            <p>
-              {accounts.data?.totalCount ?? '—'} registered accounts. Personnel and payroll access
-              are controlled separately from system administration.
-            </p>
-            <Link className="primary" to="/administration">
-              Manage users & permissions
-            </Link>
-          </section>
-          <section className="card">
-            <h2>Existing records</h2>
-            <p>
-              Review a tenant-scoped legacy import before bringing existing accounts into the ABP
-              account store.
-            </p>
-            <Link to="/imports">Review legacy accounts →</Link>
-          </section>
-        </>
+        <AdminOverview session={session} />
       ) : (
         <>
           {(role === 'HR' || role === 'Manager') && summary.data && (

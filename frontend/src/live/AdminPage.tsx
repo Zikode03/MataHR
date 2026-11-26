@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, useApi, can, type Session, type Page, type Account, type Role } from './api';
 import { ActionForm, field, optional, TextField, Loading, Empty } from './shared';
 type ImportPreview = {
@@ -13,10 +14,18 @@ type ImportPreview = {
   targetTenantId: string;
 };
 export function AdminPage({ session, imports = false }: { session: Session; imports?: boolean }) {
-  const [tab, setTab] = useState<'users' | 'permissions' | 'audit'>('users');
+  const { section } = useParams();
+  const navigate = useNavigate();
+  const [search] = useSearchParams();
+  const tab = section === 'permissions' || section === 'audit' ? section : 'users';
+  const setTab = (value: string) => navigate('/administration/' + value);
   const [selected, setSelected] = useState<Account | null>(null),
     [offset, setOffset] = useState(0),
-    [role, setRole] = useState<Role>('HR'),
+    [role, setRole] = useState<Role>(
+      ['Admin', 'HR', 'Manager', 'Employee'].includes(search.get('role') ?? '')
+        ? (search.get('role') as Role)
+        : 'HR',
+    ),
     [kind, setKind] = useState(can(session, 'Accounts') ? 'Accounts' : 'Employees'),
     [preview, setPreview] = useState<ImportPreview | null>(null),
     [credentials, setCredentials] = useState<{ email: string; temporaryPassword: string }[]>([]);
@@ -242,7 +251,7 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
               </button>
             </div>
           </section>
-          <section className="card">
+          <section className="card" id="account-form">
             <ActionForm
               key={selected?.id ?? 'new'}
               title={selected ? 'Edit ' + selected.email : 'Create account'}

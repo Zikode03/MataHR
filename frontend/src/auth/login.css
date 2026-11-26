@@ -34,3 +34,146 @@
 @media(max-width:760px) and (max-height:430px){.login-form-wrap{padding:5px 0}.login-form-wrap h2{font-size:23px;margin-bottom:12px}.login-form-wrap form>label,.login-password-label>label{font-size:10px;margin-bottom:5px}.login-input{margin-bottom:8px}}
 
 .login-privacy-prompt{color:#85758d}.login-preview-note{color:#9992a3}
+
+/* Focused sign-in panel. These rules keep its sizing independent of the brand panel. */
+.login-refined .login-form-panel {
+  padding: clamp(24px, 4vw, 64px);
+  background: #fafafa;
+  justify-content: center;
+  gap: 28px;
+}
+.login-refined .login-form-panel::before { display: none; }
+.login-refined .login-form-wrap {
+  width: 100%;
+  max-width: 456px;
+  margin: auto;
+  padding: 40px;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.login-refined .login-form-wrap h2 {
+  margin: 0 0 32px;
+  color: #20242b;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -1px;
+}
+.login-refined .login-form-wrap form > label,
+.login-refined .login-password-label > label {
+  color: #343a46;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.login-refined .login-password-label { align-items: baseline; }
+.login-refined .login-password-label > button {
+  color: #872c48;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.login-refined .login-input {
+  min-height: 50px;
+  padding: 0 14px;
+  gap: 12px;
+  margin-bottom: 24px;
+  border: 1px solid #d8dce3;
+  border-radius: 6px;
+  box-shadow: none;
+}
+.login-refined .login-input:focus-within {
+  border-color: #943650;
+  box-shadow: 0 0 0 3px #94365012;
+}
+.login-refined .login-input > input {
+  min-height: 48px;
+  font-size: 15px;
+  color: #252b36;
+}
+.login-refined .login-input > input::placeholder { font-size: 14px; color: #8b929f; }
+.login-refined .login-input > svg { width: 19px; height: 19px; color: #818997; }
+.login-refined .login-password-toggle { padding: 6px; color: #707987; cursor: pointer; }
+.login-refined .login-submit {
+  min-height: 50px;
+  margin-top: 4px;
+  background: #872c48;
+  border-color: #872c48;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: none;
+  cursor: pointer;
+}
+.login-refined .login-submit:hover { background: #72243c; border-color: #72243c; }
+.login-refined .login-submit:disabled { opacity: .65; cursor: wait; }
+.login-refined .login-privacy-prompt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 0 0;
+  text-align: left;
+  color: #697281;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.login-refined .login-privacy-prompt > svg { flex: none; margin-top: 4px; }
+.login-refined .login-preview-note:empty { display: none; }
+.login-refined .login-preview-note { min-height: 0; margin: 16px 0 0; font-size: 14px; }
+.login-refined .login-inline-feedback {
+  padding: 12px;
+  border-radius: 6px;
+  background: #fbf1f4;
+  color: #872c48;
+  text-align: left;
+}
+.login-refined .login-access-note {
+  display: block;
+  margin: 28px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid #eceef1;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #697281;
+  text-align: left;
+}
+.login-refined .login-bottomline {
+  width: 100%;
+  max-width: 456px;
+  margin: 0 auto;
+  padding: 0;
+  font-size: 12px;
+  color: #77808d;
+}
+.login-refined button:focus-visible { outline: 2px solid #872c48; outline-offset: 3px; }
+@media (max-width: 1100px) {
+  .login-refined .login-form-panel { padding: 24px; }
+  .login-refined .login-form-wrap { padding: 28px; }
+  .login-refined .login-form-wrap h2 { font-size: 30px; }
+  .login-refined .login-bottomline { flex-wrap: wrap; gap: 4px 16px; }
+}
+@media (max-width: 760px) {
+  .login-refined .login-form-panel { padding: 20px; gap: 20px; }
+  .login-refined .login-input > input { font-size: 16px; }
+}
+@media (max-height: 720px) {
+  .login-refined .login-form-panel { padding: 20px; gap: 16px; }
+  .login-refined .login-form-wrap { padding: 24px; }
+  .login-refined .login-form-wrap h2 { font-size: 30px; margin-bottom: 24px; }
+  .login-refined .login-input { margin-bottom: 18px; }
+  .login-refined .login-access-note { padding-top: 16px; margin-top: 18px; }
+}
+@media (max-height: 560px) {
+  .login-refined .login-form-panel { overflow-y: auto; }
+  .login-refined .login-form-wrap { margin: auto; padding: 20px; }
+  .login-refined .login-form-wrap h2 { font-size: 26px; margin-bottom: 18px; }
+  .login-refined .login-input { min-height: 44px; margin-bottom: 14px; }
+  .login-refined .login-input > input { min-height: 42px; }
+  .login-refined .login-submit { min-height: 44px; }
+  .login-refined .login-bottomline { display: none; }
+}
+.login-refined .login-connection-notice { margin: -8px 0 24px; padding: 14px 16px; border: 1px solid #eadce1; border-radius: 6px; background: #fbf6f8; color: #713347; font-size: 14px; line-height: 1.6; }
+.login-refined .login-connection-notice p { margin: 0; }
+.login-refined .login-connection-notice button { margin-top: 10px; padding: 0; border: 0; background: transparent; color: #872c48; font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
