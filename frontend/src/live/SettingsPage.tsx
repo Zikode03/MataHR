@@ -26,7 +26,6 @@ export function SettingsPage({ session, onPasswordChanged }: Props) {
     <div className="workspace-settings">
       <div className="page-head">
         <div>
-          <div className="eyebrow">WORKSPACE</div>
           <h1>Settings</h1>
           <p>Manage your account, security and workspace preferences.</p>
         </div>

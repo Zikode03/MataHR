@@ -13,7 +13,6 @@ import {
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
-  Building2,
   X,
   FileClock,
   UserRoundCog,
@@ -461,14 +460,6 @@ export function LiveApp() {
         >
           <X size={19} />
         </button>
-        <div className="live-organisation">
-          <span>
-            <Building2 size={18} />
-          </span>
-          <div>
-            <strong>Matateni Technologies</strong>
-          </div>
-        </div>
         <nav aria-label="Main navigation">
           {['Workspace', 'Administration'].map((group) => {
             const items = nav.filter(
@@ -521,7 +512,7 @@ export function LiveApp() {
             {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
           </button>
           <div className="live-header-context">
-            <strong>{admin ? 'Administration' : 'People workspace'}</strong>
+            <strong>Matateni Technologies</strong>
           </div>
           <div className="live-header-actions">
             {session.roles.length > 1 && (
