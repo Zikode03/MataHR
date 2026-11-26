@@ -993,3 +993,13 @@
 @media(max-width:1100px) { .role-management { grid-template-columns: minmax(0,1fr); } .role-selector { position: static; grid-template-columns: 1fr 1fr; } .role-selector-caption, .role-selector > p { grid-column: 1/-1; } .role-selector > p { padding: 0 4px; } }
 @media(max-width:600px) { .role-selector { grid-template-columns: minmax(0,1fr); } .role-selector > button { padding: 13px; } .role-selector small { margin-top: 3px; } .role-editor-heading { padding: 22px 20px; flex-wrap: wrap; gap: 12px; } .role-editor-summary { padding: 14px 20px; } .role-permission-search { margin: 20px 20px 0; } .role-permission-groups { padding: 0 20px 16px; } .role-permission-row { gap: 16px; } .role-editor-footer { flex-wrap: wrap; padding: 16px 20px; } .role-editor-footer > p { max-width: none; } .role-editor-footer > div { width: 100%; } .role-editor-footer > div > button { flex: 1; justify-content: center; } }
 @media(prefers-reduced-motion:reduce) { .role-permission-row input, .role-permission-row input::before { transition: none; } }
+.live-sidebar-logout { padding: 16px; border-top: 1px solid #e9edf2; margin-top: auto; flex: none; }
+.live-sidebar-logout > button { display: flex; align-items: center; gap: 11px; width: 100%; padding: 11px 12px; border: 1px solid #e6e1e5; border-radius: 6px; background: #fff; color: #8c4f63; font-size: 14px; font-weight: 600; cursor: pointer; }
+.live-sidebar-logout > button:hover { background: #faf4f7; border-color: #cdaaba; }
+.live-sidebar-logout > button:disabled { opacity: .5; cursor: wait; }
+.live-sidebar-logout svg { flex: none; }
+.live-shell-collapsed .live-sidebar-logout { padding: 16px 12px; }
+.live-shell-collapsed .live-sidebar-logout > button { justify-content: center; padding: 11px; }
+.live-shell-collapsed .live-sidebar-logout > button > span { display: none; }
+.live-account-popover > a { display: block; padding: 10px 12px; border: 1px solid #e7dfe4; border-radius: 5px; color: #8c4f63; background: #fcf8fa; font-size: 14px; }
+@media(max-width:760px) { .live-shell-collapsed .live-sidebar-logout { padding: 16px; } .live-shell-collapsed .live-sidebar-logout > button { justify-content: flex-start; } .live-shell-collapsed .live-sidebar-logout > button > span { display: inline; } }

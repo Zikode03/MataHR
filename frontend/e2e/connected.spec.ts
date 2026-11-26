@@ -20,7 +20,7 @@ async function login(page: Page, email: string) {
   if (await acknowledgement.isVisible()) await acknowledgement.click();
   await expect(page.getByRole('navigation')).toBeVisible({ timeout: 30000 });
   await page.getByLabel('Account menu', { exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Log out', exact: true })).toBeEnabled();
   await page.getByLabel('Account menu', { exact: true }).click();
 }
 async function post(page: Page, path: string, body: unknown) {

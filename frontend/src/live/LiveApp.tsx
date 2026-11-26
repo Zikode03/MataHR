@@ -490,6 +490,21 @@ export function LiveApp() {
             );
           })}
         </nav>
+        <div className="live-sidebar-logout">
+          <button
+            type="button"
+            disabled={busy}
+            aria-label="Log out"
+            title="Log out"
+            onClick={() => {
+              setMenu(false);
+              void signOut();
+            }}
+          >
+            <LogOut size={18} aria-hidden="true" />
+            <span>{busy ? 'Logging out…' : 'Log out'}</span>
+          </button>
+        </div>
       </aside>
       <div className="content" inert={menu || undefined}>
         <header className="live-header">
@@ -546,10 +561,7 @@ export function LiveApp() {
               <div className="live-account-popover">
                 <strong>{session.email}</strong>
                 <span>{roleName}</span>
-                <button disabled={busy} onClick={signOut}>
-                  <LogOut size={16} />
-                  Sign out
-                </button>
+                <Link to="/settings/security">Account security</Link>
               </div>
             </details>
           </div>
