@@ -1,7 +1,8 @@
+import { RolePermissions } from './RolePermissions';
 import { UserManagement } from './UserManagement';
 import { useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { api, useApi, can, type Session, type Page, type Role } from './api';
+import { useParams, useNavigate } from 'react-router-dom';
+import { api, useApi, can, type Session, type Page } from './api';
 import { ActionForm, field, Loading, Empty } from './shared';
 type ImportPreview = {
   id: string;
@@ -17,23 +18,15 @@ type ImportPreview = {
 export function AdminPage({ session, imports = false }: { session: Session; imports?: boolean }) {
   const { section } = useParams();
   const navigate = useNavigate();
-  const [search] = useSearchParams();
+
   const tab = section === 'permissions' || section === 'audit' ? section : 'users';
   const setTab = (value: string) => navigate('/administration/' + value);
-  const [role, setRole] = useState<Role>(
-      ['Admin', 'HR', 'Manager', 'Employee'].includes(search.get('role') ?? '')
-        ? (search.get('role') as Role)
-        : 'HR',
-    ),
-    [kind, setKind] = useState(can(session, 'Accounts') ? 'Accounts' : 'Employees'),
+  const [kind, setKind] = useState(can(session, 'Accounts') ? 'Accounts' : 'Employees'),
     [preview, setPreview] = useState<ImportPreview | null>(null),
     [credentials, setCredentials] = useState<{ email: string; temporaryPassword: string }[]>([]);
-  const permissions = useApi<{ permission: string; granted: boolean }[]>(
-      !imports && tab === 'permissions' ? '/admin/role-permissions?role=' + role : null,
-    ),
-    audit = useApi<
-      Page<{ id: string; actorId: string; action: string; targetId: string; at: string }>
-    >(!imports && tab === 'audit' ? '/admin/audit?maxResultCount=25' : null);
+  const audit = useApi<
+    Page<{ id: string; actorId: string; action: string; targetId: string; at: string }>
+  >(!imports && tab === 'audit' ? '/admin/audit?maxResultCount=25' : null);
   if (imports)
     return (
       <>
@@ -198,42 +191,7 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
         ))}
       </div>
       {tab === 'users' && <UserManagement session={session} />}
-      {tab === 'permissions' && (
-        <section className="card">
-          <h2>Role permissions</h2>
-          <label>
-            Role
-            <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
-              {(['Admin', 'HR', 'Manager', 'Employee'] as Role[]).map((r) => (
-                <option key={r}>{r}</option>
-              ))}
-            </select>
-          </label>
-          <Loading error={permissions.error} loading={permissions.loading} />
-          {permissions.data?.map((grant) => (
-            <ActionForm
-              key={role + grant.permission + String(grant.granted)}
-              submit="Update grant"
-              onSave={async (data) => {
-                await api('/admin/role-permissions', 'PUT', {
-                  role,
-                  permission: grant.permission,
-                  granted: data.has('granted'),
-                });
-                permissions.reload();
-              }}
-            >
-              <label className="live-check">
-                <input type="checkbox" name="granted" defaultChecked={grant.granted} />
-                {grant.permission
-                  .replace(/^Workforce\./, '')
-                  .replaceAll('.', ' · ')
-                  .replace(/([a-z])([A-Z])/g, ' ')}
-              </label>
-            </ActionForm>
-          ))}
-        </section>
-      )}
+      {tab === 'permissions' && <RolePermissions />}
       {tab === 'audit' && (
         <section className="card">
           <h2>Recent audit events</h2>
