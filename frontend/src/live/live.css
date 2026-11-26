@@ -1003,3 +1003,32 @@
 .live-shell-collapsed .live-sidebar-logout > button > span { display: none; }
 .live-account-popover > a { display: block; padding: 10px 12px; border: 1px solid #e7dfe4; border-radius: 5px; color: #8c4f63; background: #fcf8fa; font-size: 14px; }
 @media(max-width:760px) { .live-shell-collapsed .live-sidebar-logout { padding: 16px; } .live-shell-collapsed .live-sidebar-logout > button { justify-content: flex-start; } .live-shell-collapsed .live-sidebar-logout > button > span { display: inline; } }
+.header-notifications { position: relative; }
+.header-notifications > summary { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid #e5e9ef; border-radius: 7px; list-style: none; color: #788598; cursor: pointer; position: relative; }
+.header-notifications > summary::-webkit-details-marker { display: none; }
+.header-notifications > summary:hover, .header-notifications[open] > summary { background: #fcf7f9; border-color: #d9c2cd; color: #99536e; }
+.notification-count { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; display: grid; place-items: center; padding: 0 4px; border: 2px solid #fff; border-radius: 10px; background: #a2506e; color: #fff; font-size: 10px; font-weight: 600; line-height: 1; }
+.notifications-panel { position: absolute; right: -10px; top: calc(100% + 18px); width: 375px; max-height: min(600px,calc(100dvh - 105px)); overflow-y: auto; border: 1px solid #e2e7ee; border-radius: 9px; background: #fff; box-shadow: 0 12px 40px #28374b1a; z-index: 70; }
+.notifications-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 21px 22px; border-bottom: 1px solid #edf0f4; }
+.notifications-heading h2 { font-size: 17px; font-weight: 600; margin: 0; }
+.notifications-heading p { margin: 5px 0 0; font-size: 14px; color: #939dab; font-weight: 400; }
+.notifications-heading button { display: grid; place-items: center; padding: 6px; border: 0; border-radius: 4px; background: none; color: #9a667d; cursor: pointer; }
+.notifications-heading button:disabled { opacity: .35; cursor: default; }
+.notifications-empty { display: grid; justify-items: center; padding: 34px 25px; gap: 12px; text-align: center; color: #b19ba6; }
+.notifications-empty strong { font-size: 15px; font-weight: 600; color: #748196; }
+.notifications-empty p { font-size: 14px; line-height: 1.7; font-weight: 400; margin: 0; color: #929caa; }
+.notifications-list > a { display: flex; align-items: flex-start; gap: 12px; padding: 17px 22px; border-bottom: 1px solid #f0f2f5; color: inherit; }
+.notifications-list > a.is-unread { background: #fdf9fb; }
+.notifications-list > a:hover { background: #f7f8fb; }
+.notification-event-icon { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid #ece3e9; border-radius: 7px; background: #fff; color: #a4778d; flex: none; }
+.notifications-list > a > span:nth-child(2) { flex: 1; }
+.notifications-list strong { display: block; font-size: 14px; line-height: 1.6; font-weight: 550; color: #718096; }
+.live-shell .notifications-list small { display: block; margin-top: 4px; color: #9da6b3; font-size: 12px; font-weight: 400; line-height: 1.6; }
+.notifications-list i { width: 5px; height: 5px; border-radius: 50%; background: #a66c85; margin-top: 7px; flex: none; }
+.notifications-footer { display: grid; gap: 10px; padding: 16px 22px; background: #fff; }
+.notifications-footer > a { display: flex; align-items: center; justify-content: space-between; gap: 7px; color: #956178; font-size: 14px; font-weight: 600; }
+.live-shell .notifications-footer small { color: #a6aebb; font-size: 12px; font-weight: 400; }
+.notifications-feedback { padding: 20px 22px; font-size: 14px; color: #949eac; }
+.notifications-feedback p { margin: 0 0 10px; font-size: 14px; }
+.notifications-feedback button { padding: 5px 0; border: 0; background: none; color: #9b637c; text-decoration: underline; font-size: 14px; }
+@media(max-width:760px) { .notifications-panel { position: fixed; top: 76px; left: 12px; right: 12px; width: auto; max-height: calc(100dvh - 92px); } .header-notifications > summary { width: 32px; height: 34px; } }

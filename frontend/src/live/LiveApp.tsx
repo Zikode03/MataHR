@@ -23,6 +23,7 @@ import { LoginPage } from '../auth/LoginPage';
 import { api, ApiError, can, message, type Session, type Role } from './api';
 import { ActionForm, field, TextField } from './shared';
 import { HomePage } from './HomePage';
+import { AdminNotifications } from './AdminNotifications';
 import './live.css';
 
 const PeoplePage = lazy(() =>
@@ -530,6 +531,9 @@ export function LiveApp() {
             <strong>Matateni Technologies</strong>
           </div>
           <div className="live-header-actions">
+            {admin && can(session, 'Accounts') && can(session, 'Audit') && (
+              <AdminNotifications key={session.tenantId + session.id} session={session} />
+            )}
             {session.roles.length > 1 && (
               <label className="live-role-switch">
                 <span className="live-workspace-label">Workspace</span>

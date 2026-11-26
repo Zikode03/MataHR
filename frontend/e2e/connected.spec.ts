@@ -74,6 +74,14 @@ test('Admin workspace manages native accounts and respects payroll boundaries', 
   await expect(page.getByText('browser-hr@example.invalid', { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByText('browser-hr@example.invalid', { exact: true })).toBeVisible();
+  await page.getByLabel(/^Notifications/).click();
+  await expect(page.getByRole('heading', { name: 'Notifications', exact: true })).toBeVisible();
+  await expect(page.getByText('New user account created', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Mark all notifications as read', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Mark all notifications as read', exact: true }),
+  ).toBeDisabled();
+  await page.keyboard.press('Escape');
 });
 
 test('HR creates a persistent employee, organisation records and dated payroll inputs', async ({
