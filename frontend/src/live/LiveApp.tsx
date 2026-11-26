@@ -419,14 +419,6 @@ export function LiveApp() {
     },
     { to: '/settings/general', label: 'Settings', icon: Settings2, show: true },
   ].filter((x) => x.show);
-  const currentPage =
-    nav.find((item) => location.pathname === item.to || location.pathname.startsWith(item.to + '/'))
-      ?.label ??
-    (location.pathname.startsWith('/settings')
-      ? 'Settings'
-      : location.pathname.startsWith('/administration')
-        ? 'User management'
-        : 'Workspace');
   const roleName = admin
     ? 'System administrator'
     : hr
@@ -475,7 +467,6 @@ export function LiveApp() {
           </span>
           <div>
             <strong>Matateni Technologies</strong>
-            <small>{roleName}</small>
           </div>
         </div>
         <nav aria-label="Main navigation">
@@ -508,13 +499,6 @@ export function LiveApp() {
             );
           })}
         </nav>
-        <div className="live-sidebar-bottom">
-          <ShieldCheck size={17} />
-          <div>
-            <strong>Secure workspace</strong>
-            <small>Access managed by your organisation</small>
-          </div>
-        </div>
       </aside>
       <div className="content" inert={menu || undefined}>
         <header className="live-header">
@@ -537,11 +521,10 @@ export function LiveApp() {
             {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
           </button>
           <div className="live-header-context">
-            <span>{admin ? 'System administration' : roleName + ' workspace'}</span>
-            <strong>{currentPage}</strong>
+            <strong>{admin ? 'Administration' : 'People workspace'}</strong>
           </div>
           <div className="live-header-actions">
-            {session.roles.length > 1 ? (
+            {session.roles.length > 1 && (
               <label className="live-role-switch">
                 <span className="live-workspace-label">Workspace</span>
                 <select
@@ -557,11 +540,6 @@ export function LiveApp() {
                   ))}
                 </select>
               </label>
-            ) : (
-              <span className="live-role-label">
-                <span />
-                {role === 'HR' ? 'Human resources' : role}
-              </span>
             )}
             <details className="live-account-menu" key={location.pathname}>
               <summary aria-label="Account menu">
@@ -670,7 +648,6 @@ export function LiveApp() {
             </Routes>
           </Suspense>
         </main>
-        <footer>MataHR · Matateni Technologies</footer>
       </div>
     </div>
   );

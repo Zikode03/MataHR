@@ -1,7 +1,7 @@
 import { RolePermissions } from './RolePermissions';
 import { UserManagement } from './UserManagement';
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { api, useApi, can, type Session, type Page } from './api';
 import { ActionForm, field, Loading, Empty } from './shared';
 type ImportPreview = {
@@ -17,10 +17,8 @@ type ImportPreview = {
 };
 export function AdminPage({ session, imports = false }: { session: Session; imports?: boolean }) {
   const { section } = useParams();
-  const navigate = useNavigate();
 
   const tab = section === 'permissions' || section === 'audit' ? section : 'users';
-  const setTab = (value: string) => navigate('/administration/' + value);
   const [kind, setKind] = useState(can(session, 'Accounts') ? 'Accounts' : 'Employees'),
     [preview, setPreview] = useState<ImportPreview | null>(null),
     [credentials, setCredentials] = useState<{ email: string; temporaryPassword: string }[]>([]);
@@ -165,7 +163,6 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
     <div className={'admin-settings-page admin-settings-' + tab}>
       <div className="page-head">
         <div>
-          <div className="eyebrow">SYSTEM ADMINISTRATION</div>
           <h1>
             {tab === 'users'
               ? 'User management'
@@ -174,21 +171,13 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
                 : 'Audit trail'}
           </h1>
           <p>
-            Assign accounts and permissions without granting automatic access to confidential HR
-            records.
+            {tab === 'users'
+              ? 'Create accounts and manage access to your organisation.'
+              : tab === 'permissions'
+                ? 'Define what each role can access and manage.'
+                : 'Review recorded changes and actions across your organisation.'}
           </p>
         </div>
-      </div>
-      <div className="life-nav" aria-label="Administration sections">
-        {(['users', 'permissions', 'audit'] as const).map((item) => (
-          <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}>
-            {item === 'users'
-              ? 'Users & access'
-              : item === 'permissions'
-                ? 'Role permissions'
-                : 'Audit trail'}
-          </button>
-        ))}
       </div>
       {tab === 'users' && <UserManagement session={session} />}
       {tab === 'permissions' && <RolePermissions />}
@@ -207,6 +196,11 @@ export function AdminPage({ session, imports = false }: { session: Session; impo
                 </tr>
               </thead>
               <tbody>
+                {audit.data?.items.length === 0 && (
+                  <tr>
+                    <td colSpan={4}>No audit events yet. Recorded changes will appear here.</td>
+                  </tr>
+                )}
                 {audit.data?.items.map((row) => (
                   <tr key={row.id}>
                     <td>{new Date(row.at).toLocaleString()}</td>

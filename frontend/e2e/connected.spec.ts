@@ -41,7 +41,7 @@ test('Admin workspace manages native accounts and respects payroll boundaries', 
   expect((await page.request.get('/api/payroll/salaries')).status()).toBe(403);
   await expect(page.getByRole('heading', { name: 'Set up your people workspace' })).toBeVisible();
   await expect(page.getByLabel('Account overview')).toContainText('Total accounts');
-  await expect(page.locator('.live-header-context')).toContainText('System overview');
+  await expect(page.locator('.live-header-context')).toContainText('Administration');
   await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
   await expect(page.locator('.live-sidebar')).toHaveCSS('width', '80px');
   await page.getByRole('button', { name: 'Expand sidebar', exact: true }).click();
