@@ -527,9 +527,6 @@ export function LiveApp() {
           >
             {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
           </button>
-          <div className="live-header-context">
-            <strong>Matateni Technologies</strong>
-          </div>
           <div className="live-header-actions">
             {admin && can(session, 'Accounts') && can(session, 'Audit') && (
               <AdminNotifications key={session.tenantId + session.id} session={session} />
