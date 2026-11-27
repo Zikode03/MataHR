@@ -1,0 +1,165 @@
+import { useCallback, useEffect, useState } from 'react';
+
+export type Role = 'Admin' | 'HR' | 'Manager' | 'Employee';
+export type Session = {
+  id: string;
+  tenantId: string;
+  email: string;
+  employeeId: string | null;
+  roles: Role[];
+  permissions: string[];
+  privacyVersion: string;
+  privacyAcknowledged: boolean;
+  requiresPasswordChange?: boolean;
+};
+export type Page<T> = { totalCount: number; items: T[] };
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export async function api<T>(
+  path: string,
+  method = 'GET',
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  const protection: Record<string, string> = {};
+  // Cookies identify the account; the antiforgery token proves this write came through our app.
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
+    const token = await api<{ requestToken: string; headerName: string }>(
+      '/auth/antiforgery',
+      'GET',
+      undefined,
+      signal,
+    );
+    if (!token.requestToken || !token.headerName)
+      throw new Error('Could not secure this request. Refresh the page and try again.');
+    protection[token.headerName] = token.requestToken;
+  }
+  const response = await fetch('/api' + path, {
+    method,
+    credentials: 'include',
+    signal,
+    headers: {
+      'X-MataHR-Request': '1',
+      ...protection,
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+  const text = await response.text();
+  let data: unknown;
+  try {
+    data = text ? JSON.parse(text) : undefined;
+  } catch {
+    throw new ApiError(
+      response.status,
+      'The API returned an unexpected response. Check the backend connection.',
+    );
+  }
+  if (!response.ok) {
+    const error = data as
+      | {
+          error?: { message?: string } | string;
+          detail?: string;
+          title?: string;
+          errors?: Record<string, string[]>;
+        }
+      | undefined;
+    const message =
+      typeof error?.error === 'string'
+        ? error.error
+        : (error?.error?.message ??
+          error?.detail ??
+          (error?.errors ? Object.values(error.errors).flat().join(' ') : undefined) ??
+          (response.status === 401
+            ? path === '/auth/login'
+              ? 'Check your work email, password and organisation, then try again.'
+              : path === '/auth/mfa/login'
+                ? 'The verification code is invalid or the sign-in challenge expired.'
+                : 'Your session has expired. Sign in again.'
+            : response.status === 429
+              ? 'Too many attempts. Wait a minute and try again.'
+              : response.status === 403
+                ? 'You do not have permission for this action.'
+                : (error?.title ?? 'The request could not be completed.')));
+    if (response.status === 401 && !path.startsWith('/auth/'))
+      window.dispatchEvent(new Event('matahr:session-expired'));
+    throw new ApiError(response.status, message);
+  }
+  return data as T;
+}
+
+export function useApi<T>(path: string | null) {
+  const [state, setState] = useState<{
+    path: string | null;
+    data: T | null;
+    loading: boolean;
+    error: string;
+  }>({ path, data: null, loading: !!path, error: '' });
+  const [revision, setRevision] = useState(0);
+  const reload = useCallback(() => setRevision((v) => v + 1), []);
+  useEffect(() => {
+    if (!path) {
+      setState({ path, data: null, loading: false, error: '' });
+      return;
+    }
+    // A request for the previous page or filter must not replace the current result.
+    const controller = new AbortController();
+    setState((previous) => ({
+      path,
+      data: previous.path === path ? previous.data : null,
+      loading: true,
+      error: '',
+    }));
+    api<T>(path, 'GET', undefined, controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) setState({ path, data, loading: false, error: '' });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted)
+          setState({ path, data: null, loading: false, error: message(error) });
+      });
+    return () => controller.abort();
+  }, [path, revision]);
+  return {
+    ...state,
+    data: state.path === path ? state.data : null,
+    loading: state.path !== path ? !!path : state.loading,
+    reload,
+  };
+}
+export function message(error: unknown) {
+  return error instanceof Error ? error.message : 'Unable to complete this action. Try again.';
+}
+export function today() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Johannesburg',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+export function month() {
+  return today().slice(0, 7);
+}
+export function periodQuery() {
+  return 'from=' + month() + '-01&to=' + today();
+}
+export const can = (session: Session, permission: string) =>
+  session.permissions.includes('Workforce.' + permission);
+export function download(content: { name: string; contentType: string; contentBase64: string }) {
+  const bytes = Uint8Array.from(atob(content.contentBase64), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: content.contentType }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = content.name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

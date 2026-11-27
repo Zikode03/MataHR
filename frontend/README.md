@@ -1,62 +1,56 @@
-# MataHR connected frontend
+# MataHR frontend
 
-React 19, TypeScript and Vite. The default entry point mounts `src/live/LiveApp.tsx`, which uses the ABP backend rather than the old browser-only workspace stores.
+React, TypeScript and Vite. `src/main.tsx` mounts the single application in `src/app/App.tsx`. Authentication and workforce records use the ABP backend. There are no alternate demo entry points, seeded browser employee stores or fallback demo sign-ins.
 
-## Run locally
+## Run
 
-Start `MataHR.Workforce.Host` from the backend repository on `https://localhost:7043`. In this directory:
+Start the backend at `https://localhost:7043`, then run `npm ci` and `npm run dev` from this directory. Alternatively, use `npm install` and `npm run dev` from the repository root. Open `http://localhost:5173`.
 
-```powershell
-npm ci
-npm start
-```
+Vite proxies `/api` to the backend. `MATAHR_API_TARGET` overrides the development proxy target for isolated tests. Its relaxed upstream certificate check applies only to local development.
 
-Open `http://localhost:5173`. Vite forwards `/api` to the local HTTPS backend, using the same browser origin for session cookies. `MATAHR_API_TARGET` overrides the proxy target for isolated tests. The relaxed upstream certificate check is limited to the local Vite development proxy; it is not a production TLS policy.
+If recovery email delivery is enabled, set the backend's `Auth:PasswordResetUrl` to the HTTPS frontend URL ending in `/reset-password`. The backend adds the one-time link parameters.
 
-Sign in with an assigned native account. The organisation ID comes from `/api/auth/config`; a manual field appears if configuration is unavailable. Passwords and role assignments are never stored in browser storage. MFA challenges, server-recorded privacy acknowledgement, expired sessions and mandatory first-login password changes are handled before opening workforce routes.
+## Source layout
 
-## Connected workflows
+- `app/`: separate session controller, authentication/privacy gates, workspace shell, header, sidebar and routes.
+- `features/`: admin, auth, dashboard, employees, organisation, attendance, leave, payroll and settings.
+- `shared/`: API transport, request protection, session types and shared form/status components. Domain response types belong to their features.
+- `styles/`: base styles, theme and a stylesheet manifest. The workspace frame and feature styles live with their owning modules.
 
-| Workspace | Live capabilities |
-|---|---|
-| System Administrator | Native accounts, employee links using a minimal directory, assigned roles, persisted role grants, audit metadata and reviewed account imports |
-| HR | Employee records/history/documents/contracts, organisation chart/reporting/layout, attendance setup and review, leave configuration/decisions, compensation/benefits/payroll input workflows and reviewed employee imports |
-| Manager | Direct-report records, attendance/correction/overtime decisions, manager-stage leave decisions and personal services |
-| Employee | Own record/documents/contracts, attendance, leave/balances, released payslips/benefits and a safe read-only organisation directory |
+Each feature owns its UI and feature-specific types. The organisation canvas uses a small adapter type; it does not import employee seeds, prototype workspace reducers or unrelated HR modules. Test fixtures stay in tests.
 
-Navigation follows permissions returned by the server. Every API operation also checks server permissions, tenant boundaries and employee/team scope. No role picker can assign access. Multi-role users can switch between their assigned workspaces.
+`features/dashboard/` contains separate `AdminDashboard`, `HRDashboard`, `ManagerDashboard` and `EmployeeDashboard` components. `HomePage` selects the assigned role's dashboard; shared dashboard components provide the header, workforce metrics, employee profile and workspace links. Backend permissions continue to enforce data access.
 
-The existing HR organisation canvas is retained: card positions, reporting changes, connector control points and company-card coordinates are saved through the API. Read-only views use a reporting tree and do not expose confidential employee fields.
+User management separates its controller, account table, editor, action menu and status confirmation. Audit trail and reviewed legacy imports have dedicated pages. Organisation chart state and commands live in `useOrganisationChart`; the toolbar, canvas, employee cards, reporting editor and connector editing have separate components. These components share typed controller contracts rather than duplicating state.
 
-Payroll prepares dated inputs, independent review/approval, export and verified provider-payslip release. It does not calculate statutory net pay, submit tax returns or make payments.
+## Scope and limits
 
-## Attendance verification
+See [module status](../docs/module-status.md) for implemented workflows and unfinished requirements. A working page, a successful build or a passing test is not a claim that the entire HR product is complete.
 
-HR creates work locations and configures actual GPS coordinates with a 50–1000 metre boundary. The on-site display rotates an eight-digit code every two minutes while open. Clock-in requires the current code plus a fresh location inside the boundary, with accuracy of 50 metres or better. A code cannot be reused by the same employee. Codes are hashed in the database; precise employee coordinates are not retained in attendance records.
+Accounts and permissions are server-backed. The profile displays the signed-in account and linked employee information. Password and authenticator changes use security APIs. Appearance preferences and notification read status are scoped to the account in this browser. Notifications derive recent administrative activity from the audit API; they are not a server notification inbox or push service. Organisation settings are informational, rather than editable company configuration.
 
-Evidence is a clock-in check, not proof of continuous presence or a guarantee against device/location spoofing. Remote work and exception reasons remain unverified and require independent attendance review. Completed attendance also follows its normal review workflow.
+Payroll prepares dated inputs, review/approval, export and verified provider-payslip release. It does not calculate statutory net pay, submit tax returns or make payments. SMTP/recovery delivery and production deployment/security configuration require operational setup.
 
-Actual office boundaries are deliberately unset until HR supplies the correct sites, including the Mpumalanga office. Fictional browser-test coordinates must never be treated as real office configuration.
+## Attendance and imports
 
-## Reviewed legacy import
+On-site attendance checks a rotating code plus fresh browser GPS against an HR-configured boundary. Remote work and exceptions need review. This does not prove continuous presence or prevent all device/location spoofing. Real office coordinates, including Mpumalanga, still need confirmation.
 
-HR reviews employee records; Admin reviews accounts. The server creates an expiring review, verifies the source fingerprint again at commit, checks role/tenant scope, and applies the accepted batch transactionally. Existing native records are not overwritten. Missing employee links, conflicting numbers, invalid roles and reporting cycles block import. Imported accounts get one-time temporary credentials and must change their password before opening workforce routes.
-
-An explicitly configured legacy source tenant can map to one named destination tenant. It is not a client-supplied tenant switch. Credentials and legacy password hashes are never included in review rows. The importer covers employees/accounts, not legacy contracts, payroll or other module data.
+Reviewed employee/account imports are tenant-scoped, expiring and checked again against the source before commit. Existing native credentials are preserved. The importer does not cover legacy contracts, payroll or other module records.
 
 ## Verification
 
 ```powershell
 npm test
 npm run build
+npm run test:startup
 ```
 
-The browser suite uses a real ABP API and a GUID-named disposable SQL database, not mocked API responses. From the backend repository:
+Tests cover API/session request handling, real login behaviour, organisation canvas behaviour and architecture boundaries. Architecture checks fail if production source becomes unreachable from the application entry or imports an abandoned demo store.
+
+The browser suite runs the real ABP API against a disposable SQL database and verifies all four roles. From the backend repository:
 
 ```powershell
-pwsh -File scripts/Test-ConnectedFrontend.ps1 -FrontendPath <absolute-path-to-this-frontend>
+pwsh -File scripts/Test-ConnectedFrontend.ps1 -FrontendPath <absolute-frontend-path>
 ```
 
-It uses loopback API port 7143 and frontend port 5174, tests all four roles, persistence, payroll access boundaries, GPS/code clock-in and staged leave approval, then shuts down and deletes only its guarded test database. On Windows it uses installed Microsoft Edge; Linux requires Playwright Chromium installed. Browser artifacts stay in `.local/`.
-
-The remaining prototype directories (`operations`, `intelligence`, and older workspace models) are retained as design references and regression-tested source. They are not mounted as live workflows by the new entry point. SMTP/recovery delivery and production deployment/security configuration remain operational setup tasks.
+It uses ports 7143 and 5174, cleans up its guarded test database, and does not modify the real MataHR database. Screenshots and traces are off by default. Browser artifacts stay in `.local/`.

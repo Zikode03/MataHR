@@ -8,15 +8,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test:operations": "node --test tests/operations.test.cjs",
-    "test:intelligence": "node --test tests/intelligence.test.cjs",
     "test": "node --test tests/*.test.cjs",
-    "test:administration": "node --test tests/administration.test.cjs",
-    "test:corehr": "node --test tests/corehr.test.cjs",
-    "test:policies": "node --test tests/policies.test.cjs",
     "test:startup": "node --experimental-vm-modules scripts/verify-dev-startup.cjs",
     "test:organisation": "node --test tests/organisation.test.cjs",
-    "test:organisation-drag": "node --test tests/organisation-drag.test.cjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

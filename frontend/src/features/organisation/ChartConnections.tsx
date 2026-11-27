@@ -1,0 +1,332 @@
+import { useRef, useState, type PointerEvent, type RefObject } from 'react';
+import type { ChartRecord, Org } from './types';
+
+import {
+  CARD_HEIGHT,
+  CARD_WIDTH,
+  chartDropTarget,
+  chartLayout,
+  connectChartPeople,
+  pointerToChart,
+  routeChartLine,
+} from './model';
+type Props = {
+  org: Org;
+  employees: ChartRecord[];
+  layout: ReturnType<typeof chartLayout>;
+  canvas: RefObject<HTMLDivElement | null>;
+  zoom: number;
+  width: number;
+  height: number;
+  onSave: (next: Org) => void;
+  onMessage: (value: string) => void;
+  onError: (value: string) => void;
+};
+// Keep connector editing separate from card dragging: changing a line must not silently move a person.
+export function ChartConnections({
+  org,
+  employees,
+  layout,
+  canvas,
+  zoom,
+  width,
+  height,
+  onSave,
+  onMessage,
+  onError,
+}: Props) {
+  const [source, setSource] = useState(''),
+    [selected, setSelected] = useState(''),
+    [cursor, setCursor] = useState<{ x: number; y: number } | null>(null),
+    [route, setRoute] = useState<{ employee: string; point: { x: number; y: number } } | null>(
+      null,
+    );
+  const gesture = useRef<{
+    kind: 'connect' | 'route';
+    id: string;
+    pointer: number;
+    start: { x: number; y: number };
+    moved: boolean;
+  } | null>(null);
+  const display = route
+    ? chartLayout(routeChartLine(org, employees, route.employee, route.point), employees)
+    : layout;
+  const origin = layout.nodes.find((n) => n.id === source),
+    start =
+      source === 'company'
+        ? {
+            x: layout.company.x + layout.company.width / 2,
+            y: layout.company.y + layout.company.height,
+          }
+        : origin
+          ? { x: origin.x + CARD_WIDTH / 2, y: origin.y + CARD_HEIGHT }
+          : null;
+  function point(e: PointerEvent<SVGElement>) {
+    const el = canvas.current!,
+      r = el.getBoundingClientRect();
+    return pointerToChart(
+      { x: e.clientX, y: e.clientY },
+      { left: r.left, top: r.top, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop },
+      zoom,
+    );
+  }
+  function connect(manager: string, employee: string) {
+    try {
+      onSave(connectChartPeople(org, employees, manager, employee));
+      onError('');
+      onMessage('Reporting line connected. Card positions are unchanged.');
+      setSource('');
+      setCursor(null);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Unable to connect these employees.');
+    }
+  }
+  function down(e: PointerEvent<SVGElement>, kind: 'connect' | 'route', id: string) {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    gesture.current = {
+      kind,
+      id,
+      pointer: e.pointerId,
+      start: { x: e.clientX, y: e.clientY },
+      moved: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (kind === 'connect') {
+      setSource(id);
+      setCursor(point(e));
+    } else setSelected(id);
+  }
+  function move(e: PointerEvent<SVGElement>) {
+    const g = gesture.current;
+    if (!g || g.pointer !== e.pointerId) return;
+    e.stopPropagation();
+    g.moved ||= Math.hypot(e.clientX - g.start.x, e.clientY - g.start.y) > 5;
+    if (g.kind === 'connect') setCursor(point(e));
+    else if (g.moved) setRoute({ employee: g.id, point: point(e) });
+  }
+  function cancel() {
+    gesture.current = null;
+    setRoute(null);
+    setSource('');
+    setCursor(null);
+  }
+  function up(e: PointerEvent<SVGElement>) {
+    const g = gesture.current;
+    if (!g || g.pointer !== e.pointerId) return;
+    e.stopPropagation();
+    const p = point(e),
+      el = canvas.current!,
+      r = el.getBoundingClientRect(),
+      inside =
+        e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    gesture.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId))
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    setRoute(null);
+    if (!inside) {
+      setSource('');
+      setCursor(null);
+      return;
+    }
+    if (g.kind === 'route') {
+      if (g.moved) {
+        onSave(routeChartLine(org, employees, g.id, p));
+        onMessage('Line route saved. Reporting relationships are unchanged.');
+      }
+      return;
+    }
+    if (g.moved) {
+      const target = chartDropTarget(layout, p, g.id);
+      if (target && target !== 'company') connect(g.id, target);
+      else {
+        setSource('');
+        setCursor(null);
+        onMessage('Drop the connector onto an employee card.');
+      }
+    } else setCursor(null);
+  }
+  const events = {
+    onPointerMove: move,
+    onPointerUp: up,
+    onPointerCancel: cancel,
+    onLostPointerCapture: () => {
+      if (gesture.current) cancel();
+    },
+  };
+  const chosen = layout.edges.find((e) => e.to === selected);
+  return (
+    <>
+      <svg
+        className="org-chart-connections org-editable-connections"
+        width={width}
+        height={height}
+        aria-label="Reporting line editor"
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            cancel();
+            setSelected('');
+          }
+        }}
+      >
+        {layout.edges.map((original) => {
+          const edge = display.edges.find((e) => e.to === original.to) ?? original;
+          return (
+            <g key={edge.to}>
+              <path
+                d={edge.path}
+                fill="none"
+                stroke={selected === edge.to ? '#92515f' : '#bec8d7'}
+                strokeWidth={selected === edge.to ? 3 : 2}
+              />
+              <path
+                className="org-line-hit"
+                d={edge.path}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelected(edge.to);
+                }}
+              />
+              <circle
+                className="org-line-bend"
+                cx={edge.bend.x}
+                cy={edge.bend.y}
+                r={7}
+                role="button"
+                tabIndex={0}
+                aria-label={
+                  'Move line bend for ' + layout.nodes.find((n) => n.id === edge.to)?.name
+                }
+                onPointerDown={(e) => down(e, 'route', edge.to)}
+                {...events}
+                onKeyDown={(e) => {
+                  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSave(
+                      routeChartLine(org, employees, edge.to, {
+                        x:
+                          edge.bend.x +
+                          (e.key === 'ArrowLeft' ? -10 : e.key === 'ArrowRight' ? 10 : 0),
+                        y:
+                          edge.bend.y +
+                          (e.key === 'ArrowUp' ? -10 : e.key === 'ArrowDown' ? 10 : 0),
+                      }),
+                    );
+                  }
+                }}
+              />
+            </g>
+          );
+        })}
+        {start && cursor && (
+          <path
+            d={`M ${start.x} ${start.y} L ${cursor.x} ${cursor.y}`}
+            fill="none"
+            stroke="#92515f"
+            strokeWidth={3}
+            strokeDasharray="7 5"
+          />
+        )}
+        {[
+          {
+            id: 'company',
+            name: 'company',
+            x: layout.company.x + layout.company.width / 2,
+            y: layout.company.y + layout.company.height,
+          },
+          ...layout.nodes.map((n) => ({
+            id: n.id,
+            name: n.name,
+            x: n.x + CARD_WIDTH / 2,
+            y: n.y + CARD_HEIGHT,
+          })),
+        ].map((n) => (
+          <circle
+            key={n.id}
+            className={'org-connect-port ' + (source === n.id ? 'active' : '')}
+            cx={n.x}
+            cy={n.y}
+            r={9}
+            tabIndex={0}
+            role="button"
+            aria-label={'Draw reporting line from ' + n.name + ' to a direct report'}
+            onPointerDown={(e) => down(e, 'connect', n.id)}
+            {...events}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setSource(n.id);
+                setCursor(null);
+                onMessage('Select the top connector of the employee who reports to this manager.');
+              }
+            }}
+          >
+            <title>Drag to an employee, or select then select their top connector</title>
+          </circle>
+        ))}
+        {layout.nodes.map((n) => (
+          <circle
+            key={n.id}
+            className={'org-connect-port org-incoming-port ' + (source ? 'awaiting' : '')}
+            cx={n.x + CARD_WIDTH / 2}
+            cy={n.y}
+            r={8}
+            role="button"
+            tabIndex={0}
+            aria-label={'Connect ' + n.name + ' to selected manager'}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (source) connect(source, n.id);
+              else {
+                setSelected(n.id);
+                onMessage('Start at a manager bottom connector, then select this top connector.');
+              }
+            }}
+            onKeyDown={(e) => {
+              if ((e.key === 'Enter' || e.key === ' ') && source) {
+                e.preventDefault();
+                connect(source, n.id);
+              }
+            }}
+          />
+        ))}
+      </svg>
+      <div className="org-connection-actions" onPointerDown={(e) => e.stopPropagation()}>
+        {source ? (
+          <>
+            <span>Connect manager to employee</span>
+            <button onClick={cancel}>Cancel connection</button>
+          </>
+        ) : chosen ? (
+          <>
+            <span>
+              Selected: {layout.nodes.find((n) => n.id === chosen.to)?.name} reporting line
+            </span>
+            <button
+              onClick={() => {
+                onSave(routeChartLine(org, employees, chosen.to, null));
+                onMessage('Automatic line routing restored.');
+              }}
+            >
+              Reset line route
+            </button>
+            {chosen.from !== 'company' && (
+              <button onClick={() => connect('company', chosen.to)}>Disconnect manager</button>
+            )}
+            <button onClick={() => setSelected('')}>Done</button>
+          </>
+        ) : (
+          <span>
+            Draw from a manager bottom dot to an employee top dot. Drag a small line dot to move its
+            bend.
+          </span>
+        )}
+      </div>
+    </>
+  );
+}

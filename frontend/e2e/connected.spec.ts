@@ -39,11 +39,11 @@ test('Admin workspace manages native accounts and respects payroll boundaries', 
   await expect(page.getByRole('heading', { name: 'System overview', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Employees', exact: true })).toHaveCount(0);
   expect((await page.request.get('/api/payroll/salaries')).status()).toBe(403);
-  await expect(page.getByRole('heading', { name: 'Set up your people workspace' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'User accounts' })).toBeVisible();
   await expect(page.getByLabel('Account overview')).toContainText('Total accounts');
-  await expect(page.locator('.live-header-context')).toHaveCount(0);
+  await expect(page.locator('.app-header-context')).toHaveCount(0);
   await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
-  await expect(page.locator('.live-sidebar')).toHaveCSS('width', '80px');
+  await expect(page.locator('.app-sidebar')).toHaveCSS('width', '80px');
   await page.getByRole('button', { name: 'Expand sidebar', exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Toggle navigation', exact: true }).click();
@@ -74,6 +74,59 @@ test('Admin workspace manages native accounts and respects payroll boundaries', 
   await expect(page.getByText('browser-hr@example.invalid', { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByText('browser-hr@example.invalid', { exact: true })).toBeVisible();
+  const managedRow = page.locator('tr').filter({ hasText: 'browser-hr@example.invalid' });
+  await managedRow
+    .getByRole('button', { name: 'Actions for browser-hr@example.invalid', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name: 'View account', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Account details', exact: true })).toContainText(
+    'browser-hr@example.invalid',
+  );
+  await page.getByRole('button', { name: 'Close account editor' }).click();
+  await managedRow
+    .getByRole('button', { name: 'Actions for browser-hr@example.invalid', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name: 'Edit roles & employee link', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Edit user access', exact: true });
+  await editor.getByLabel('Work email', { exact: true }).fill('browser-hr-updated@example.invalid');
+  await editor.getByRole('checkbox', { name: 'Admin', exact: true }).check();
+  const aliceOption = await editor
+    .getByLabel('Employee link', { exact: false })
+    .locator('option')
+    .filter({ hasText: 'Alice' })
+    .getAttribute('value');
+  await editor.getByLabel('Employee link', { exact: false }).selectOption(aliceOption!);
+  await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
+  const updatedRow = page.locator('tr').filter({ hasText: 'browser-hr-updated@example.invalid' });
+  await expect(updatedRow).toContainText('Admin');
+  await updatedRow
+    .getByRole('button', { name: 'Actions for browser-hr-updated@example.invalid', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name: 'Deactivate account', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Deactivate account', exact: true })
+    .getByRole('button', { name: 'Deactivate account', exact: true })
+    .click();
+  await expect(updatedRow.locator('.user-state')).toHaveText('Inactive');
+  await page.reload();
+  await expect(updatedRow.locator('.user-state')).toHaveText('Inactive');
+  await updatedRow
+    .getByRole('button', { name: 'Actions for browser-hr-updated@example.invalid', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name: 'Activate account', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Activate account', exact: true })
+    .getByRole('button', { name: 'Activate account', exact: true })
+    .click();
+  await expect(updatedRow.locator('.user-state')).toHaveText('Active');
+  await page
+    .getByRole('button', { name: 'Actions for admin@example.invalid', exact: true })
+    .click();
+  await expect(page.getByRole('menuitem', { name: 'Deactivate account', exact: true })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole('menuitem', { name: 'My profile', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.getByLabel(/^Notifications/).click();
   await expect(page.getByRole('heading', { name: 'Notifications', exact: true })).toBeVisible();
   await expect(page.getByText('New user account created', { exact: true })).toBeVisible();
@@ -171,7 +224,7 @@ test('Employee clocking uses real site code and GPS, and leave follows manager t
       .getByRole('combobox', { name: 'Site', exact: true })
       .selectOption({ label: 'Browser verified office' });
     await hr.getByRole('button', { name: 'Generate / rotate code' }).click();
-    const code = hr.locator('output.live-site-code');
+    const code = hr.locator('output.app-site-code');
     await expect(code).toHaveText(/^\d{8}$/);
     const siteCode = (await code.textContent())!;
     await login(employee, 'alice');
@@ -240,7 +293,6 @@ test('Employee clocking uses real site code and GPS, and leave follows manager t
       timeout: 30000,
     });
     await expect(employee.getByRole('heading', { name: 'Alice', exact: true })).toBeVisible();
-    await employee.screenshot({ path: '.local/employee-workspace.png', fullPage: true });
   } finally {
     await Promise.all([hrContext.close(), employeeContext.close(), managerContext.close()]);
   }
